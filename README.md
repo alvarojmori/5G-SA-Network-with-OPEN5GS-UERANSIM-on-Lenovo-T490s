@@ -18,7 +18,7 @@
 5) Private Cloud Validation: Validated remote access to the Lenovo T490s cluster via Tailscale, simulating a secure Private Cloud environment.
 6) Observability & Slicing: Leveraged @N.Saha’s YAML configurations to monitor traffic KPIs across multiple UPFs, demonstrating Network Slicing capabilities through a Prometheus-Grafana dashboard.
 
-![5G SA Network Topology]<img width="1047" height="646" alt="image" src="https://github.com/user-attachments/assets/5b88f1c2-4e0e-4979-8e0d-49dacb7819aa" />
+***[5G SA Network Topology]<img width="1047" height="646" alt="image" src="https://github.com/user-attachments/assets/5b88f1c2-4e0e-4979-8e0d-49dacb7819aa" />
 
 
 ### Network Breakdown

@@ -10,7 +10,7 @@
 
 -This project is built upon the excellent work of @Niloysh regarding Open5GS deployment in Kubernetes. (niloysh/open5gs-k8s-testbed-automator by Niloy Saha)
 
-******Key Modifications & Features******
+**Key Modifications & Features**
 1) Multi-Node K8s Cluster: Implementation of a multi-node solution where the host laptop acts as the Control Plane and a KVM-based Virtual Machine serves as Worker1.
 2) Isolated Networking: Utilized the KVM br0 bridge network for cluster access, ensuring deployment remains within a local environment without requiring public Internet IPs.
 3) UERANSIM & Performance: Integrated UERANSIM using hostNetwork to facilitate accurate iPerf3 throughput testing.
@@ -18,7 +18,7 @@
 5) Private Cloud Validation: Validated remote access to the Lenovo T490s cluster via Tailscale, simulating a secure Private Cloud environment.
 6) Observability & Slicing: Leveraged @N.Saha’s YAML configurations to monitor traffic KPIs across multiple UPFs, demonstrating Network Slicing capabilities through a Prometheus-Grafana dashboard.
 
-***[5G SA Network Topology]<img width="1047" height="646" alt="image" src="https://github.com/user-attachments/assets/5b88f1c2-4e0e-4979-8e0d-49dacb7819aa" />
+**5G SA Network Topology**<img width="1047" height="646" alt="image" src="https://github.com/user-attachments/assets/5b88f1c2-4e0e-4979-8e0d-49dacb7819aa" />
 
 
 ### Network Breakdown

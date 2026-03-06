@@ -1,5 +1,10 @@
-#####5G-SA-Network-with-OPEN5GS-UERANSIM-on-Lenovo-T490s#########
-#################################################################
+# 5G SA Network with Open5GS & UERANSIM on Lenovo T490s
+
+![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&logo=kubernetes&logoColor=white)
+![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)
+![Tailscale](https://img.shields.io/badge/Tailscale-5433FF?style=for-the-badge&logo=tailscale&logoColor=white)
+
+
 
 -This project was developed for my engineering degree. The thesis title is: ****“DESARROLLO DE UN LABORATORIO VIRTUAL 5G STAND ALONE EN KUBERNETES PARA DOS ABONADOS COMO HERRAMIENTA PARA LA MEJORA DE COMPETENCIAS PROFESIONALES EN LA FIEE UNAC, 2026.”***
 

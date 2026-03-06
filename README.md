@@ -18,5 +18,11 @@
 5) Private Cloud Validation: Validated remote access to the Lenovo T490s cluster via Tailscale, simulating a secure Private Cloud environment.
 6) Observability & Slicing: Leveraged @N.Saha’s YAML configurations to monitor traffic KPIs across multiple UPFs, demonstrating Network Slicing capabilities through a Prometheus-Grafana dashboard.
 
+![5G SA Network Topology]<img width="1047" height="646" alt="image" src="https://github.com/user-attachments/assets/5b88f1c2-4e0e-4979-8e0d-49dacb7819aa" />
 
+
+### Network Breakdown
+* **Master Node (192.168.122.1):** Hosted on the Lenovo T490s, managing the 5G Core and the iPerf3 Server.
+* **Worker1 Node (192.168.122.7):** A KVM-based VM running the Open5GS functions (SMF, UPF) and UERANSIM (gNB & UEs).
+* **Layer 2 Bridge (`br0`):** Provides the networking backbone for internal cluster communication without public IP exposure.
    

@@ -1,7 +1,7 @@
 #####5G-SA-Network-with-OPEN5GS-UERANSIM-on-Lenovo-T490s#########
 #################################################################
 
--This project was developed for my engineering degree. The thesis title is: “DESARROLLO DE UN LABORATORIO VIRTUAL 5G STAND ALONE EN KUBERNETES PARA DOS ABONADOS COMO HERRAMIENTA PARA LA MEJORA DE COMPETENCIAS PROFESIONALES EN LA FIEE UNAC, 2026.”
+-This project was developed for my engineering degree. The thesis title is: ****“DESARROLLO DE UN LABORATORIO VIRTUAL 5G STAND ALONE EN KUBERNETES PARA DOS ABONADOS COMO HERRAMIENTA PARA LA MEJORA DE COMPETENCIAS PROFESIONALES EN LA FIEE UNAC, 2026.”***
 
 -This project is built upon the excellent work of @Niloysh regarding Open5GS deployment in Kubernetes. (niloysh/open5gs-k8s-testbed-automator by Niloy Saha)
 

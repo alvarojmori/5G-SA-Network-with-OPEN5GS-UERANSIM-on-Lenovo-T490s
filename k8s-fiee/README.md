@@ -1,4 +1,4 @@
-1. Control Plane Initialization (Master)
+#1. Control Plane Initialization (Master)
 
 On the physical host (alvarolap), execute the master installation script. This will set up the API Server, Etcd, and the core CNI components (Flannel and Multus).
 
@@ -6,7 +6,7 @@ cd k8s-fiee
 chmod +x install_master.sh
 sudo ./install_master.sh
 
-2. Computing Node Setup (Worker)
+#2. Computing Node Setup (Worker)
 Login by ssh to the worker and clone the alvarojmori repository inside your Virtual Machine and run the worker installer to prepare the container runtime and K8s binaries.
 
 
@@ -17,7 +17,7 @@ chmod +x install_worker.sh
 sudo ./install_worker.sh
 
 
-3. Cluster Join & Node Labeling
+#3. Cluster Join & Node Labeling
 
 Generate the join command on the Master(alvarolap) and execute it on the Worker.
 
@@ -25,8 +25,6 @@ Note: Ensure you use the bridge IP 192.168.122.1 to allow cross-node communicati
 
 Once joined, assign the worker role to the node for better organization and scheduling:
 
-
-# On Master (alvarolap)
 kubectl label node worker1 node-role.kubernetes.io/worker=worker
 
 

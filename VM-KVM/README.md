@@ -10,7 +10,9 @@ ssh-copy-id worker1
 vi ~/.ssh/config
 
 Host worker1
+
 	Hostname 192.168.122.7
+	
 	user worker1
 
 

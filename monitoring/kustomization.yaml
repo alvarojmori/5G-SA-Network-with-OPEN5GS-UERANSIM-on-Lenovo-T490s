@@ -1,0 +1,11 @@
+resources:
+  - upf-metrics-services.yaml
+
+secretGenerator:
+  - name: open5gs-additional-scrape-configs
+    namespace: monitoring
+    files:
+      - open5gs-upf-additional-scrape.yaml=additional-scrape-config.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true

@@ -1,0 +1,22 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: open5gs-upf-metrics
+  namespace: monitoring
+  labels:
+    release: mon
+spec:
+  namespaceSelector:
+    matchNames:
+      - open5gs
+  selector:
+    matchLabels:
+      app: open5gs-upf-metrics
+  targetLabels:
+    - name
+    - nf
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 10s
+      fallbackScrapeProtocol: PrometheusText0.0.4

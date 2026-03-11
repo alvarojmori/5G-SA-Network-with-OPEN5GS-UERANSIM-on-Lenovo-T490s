@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: open5gs-upf1-metrics
+  namespace: open5gs
+  labels:
+    app: open5gs-upf-metrics
+    name: upf1
+    nf: upf
+spec:
+  type: ClusterIP
+  selector:
+    app: open5gs
+    name: upf1
+    nf: upf
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: open5gs-upf2-metrics
+  namespace: open5gs
+  labels:
+    app: open5gs-upf-metrics
+    name: upf2
+    nf: upf
+spec:
+  type: ClusterIP
+  selector:
+    app: open5gs
+    name: upf2
+    nf: upf
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP

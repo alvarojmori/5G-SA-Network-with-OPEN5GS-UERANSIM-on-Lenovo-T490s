@@ -1,0 +1,45 @@
+# fiee-user-rbac.yaml
+# Purpose: "fiee-user" can ONLY read resources and read logs in namespace open5gs.
+# No create/update/patch/delete. No exec. No port-forward.
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fiee-user
+  namespace: open5gs
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fiee-user-readonly
+  namespace: open5gs
+rules:
+  # Read-only: core resources
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "endpoints"]
+    verbs: ["get", "list", "watch"]
+
+  # Read-only: view logs
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+
+  # Read-only: apps workloads
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fiee-user-readonly-binding
+  namespace: open5gs
+subjects:
+  - kind: ServiceAccount
+    name: fiee-user
+    namespace: open5gs
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fiee-user-readonly
+

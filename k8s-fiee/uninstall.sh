@@ -3,7 +3,7 @@
 # Author: Alvaro
 # ==============================================================================
 
-# Función de color corregida para evitar errores de formato
+# Función de color
 cecho() {
     local RED="\033[1;31m"
     local GREEN="\033[1;32m"
@@ -19,7 +19,7 @@ cecho() {
 }
 
 run_deep_cleanup() {
-    cecho "RED" "--- INICIANDO LIMPIEZA PROFUNDA (MODO TESIS) ---"
+    cecho "RED" "--- INICIANDO LIMPIEZA PROFUNDA ---"
 
     # 1. Reset de Kubernetes
     if [ -x "$(command -v kubeadm)" ]; then

@@ -1,0 +1,35 @@
+- job_name: open5gs-upf-metrics
+  metrics_path: /metrics
+  scheme: http
+  scrape_interval: 10s
+  fallback_scrape_protocol: PrometheusText0.0.4
+
+  kubernetes_sd_configs:
+    - role: endpoints
+      namespaces:
+        names:
+          - open5gs
+
+  relabel_configs:
+    - source_labels: [__meta_kubernetes_service_label_app]
+      action: keep
+      regex: open5gs-upf-metrics
+
+    - source_labels: [__meta_kubernetes_endpoint_port_name]
+      action: keep
+      regex: metrics
+
+    - source_labels: [__meta_kubernetes_service_label_name]
+      target_label: name
+
+    - source_labels: [__meta_kubernetes_service_label_nf]
+      target_label: nf
+
+    - source_labels: [__meta_kubernetes_namespace]
+      target_label: namespace
+
+    - source_labels: [__meta_kubernetes_service_name]
+      target_label: service
+
+    - source_labels: [__meta_kubernetes_pod_name]
+      target_label: pod

@@ -29,9 +29,6 @@ kubectl delete -k mongodb -n "$NAMESPACE" --ignore-not-found
 echo "[-] Removing 5G Networking (N2, N3, N4 interfaces)..."
 kubectl delete -k networks5g -n "$NAMESPACE" --ignore-not-found
 
-# 6. Limpieza final del Namespace
-echo "[!] Deleting namespace: $NAMESPACE"
-kubectl delete namespace "$NAMESPACE" --ignore-not-found
 
 echo "-----------------------------------------------"
 echo "[✓] Uninstallation complete."

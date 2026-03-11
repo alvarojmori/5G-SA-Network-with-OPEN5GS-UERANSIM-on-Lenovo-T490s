@@ -18,8 +18,8 @@ Please use the deployment scripts to get the pods automatically.
 
    Open the webui by control plane IP :
      http://192.168.122.1:30300
-   Username: admin
-   Password: 1423
+      -Username: admin
+      -Password: 1423
    
 5) Provisioning the UE1 and UE2
 6) In case you want delete the open5gs pods and ueransim you can follow the below data :

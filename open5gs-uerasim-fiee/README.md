@@ -18,7 +18,7 @@ Please use the deployment scripts to get the pods automatically.
 
    Open the webui by control plane IP :
      http://192.168.122.1:30300
-      -Username: admin
+      -Username: admin  /
       -Password: 1423
    
 5) Provisioning the UE1 and UE2

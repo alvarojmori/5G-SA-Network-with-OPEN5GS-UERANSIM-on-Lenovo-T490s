@@ -316,7 +316,8 @@ sudo tailscale up
 
 ```
 ```
-<img width="886" height="358" alt="image" src="https://github.com/user-attachments/assets/04e8a08b-c83a-4837-8e74-a695143fa165" />
+<img width="662" height="271" alt="image" src="https://github.com/user-attachments/assets/6a478bba-1a3a-4ffb-a5a0-b61b67f6ef09" />
+
 ```
 ---
 

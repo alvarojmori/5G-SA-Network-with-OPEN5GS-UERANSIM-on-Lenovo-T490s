@@ -24,10 +24,9 @@ Engineers preparing for Core Network / Cloud-Native Network roles
 Researchers who need a reproducible 5G SA testbed without a data center
 Anyone curious about how a 5G Core actually works
 
-
-
 🏗️ Architecture Overview
 The lab uses a two-node Kubernetes cluster running entirely inside one laptop via KVM virtualization:
+
 ┌────────────────────────────────────────────────────────────────┐
 │                    Lenovo T490s (Host)                         │
 │              Intel i7-8665U  │  16 GB RAM                      │
@@ -54,11 +53,15 @@ The lab uses a two-node Kubernetes cluster running entirely inside one laptop vi
 │                                                                │
 │  Remote Access: ──── Tailscale VPN (WireGuard) ─────────────► │
 └────────────────────────────────────────────────────────────────┘
+
 Why two nodes instead of one?
 Running Core NFs (AMF, UPF, etc.) on the worker node and management components (MongoDB, WebUI, Prometheus) on the master node isolates the 5G data plane from the control plane — the same architectural principle used in production Telco Cloud deployments.
 
 ⚙️ IP Planning
 SegmentElement / PodIP AddressInterfaceRoleHost / KVMalvarolap (Master)192.168.122.1/24virbr0iPerf GatewayWorker1 (KVM VM)192.168.122.7/24eth0 / br0Core + RAN nodeK8s (Flannel)Pod internal range10.244.0.0/24cni0 / flannel.1K8s internalWebUI / MongoDB10.244.0.xeth0 (Pod)Admin accessControl PlaneAMF / NRF / UDM10.42.0.xn2br bridgeN2 signalingSMF01 / SMF0210.42.0.1xn4br bridgeSession mgmt N4User PlaneUERANSIM gNB10.43.0.1n3br bridgeGTP tunnel entryUPF01 / UPF0210.43.0.101/102n3br bridgeGTP N3 terminationN6 (Data Net)UPF Gateway10.45.0.1ogstunExit to iPerf
+
+
+
 
 🧰 Tech Stack
 ToolVersionPurposeOpen5GSLatest5G SA Core (AMF, SMF, UPF, NRF, AUSF, UDM, PCF, NSSF)UERANSIMLatestgNB + UE emulation (nr-gnb, nr-ue)Kubernetesv1.28Container orchestration (kubeadm)KVM / QEMU-Hypervisor for Worker1 VMFlannel + Multus-CNI networking (pod-to-pod + multi-interface)OpenEBS-Persistent storage for MongoDBMongoDB-Subscriber database (IMSI, K, OPC)Prometheus-Metrics collection (UPF traffic, pod resources)Grafana-Real-time dashboards (throughput, CPU, memory)Tailscale-Secure mesh VPN for remote cluster accessWireGuard-Encrypted transport layer under Tailscaleiperf3-Throughput & latency benchmarkingUbuntu22.04 LTSOS on host and all VMs
@@ -103,7 +106,7 @@ chmod +x create_worker1.sh
 ./create_worker1.sh
 This script uses VIRSH to create the KVM virtual machine (worker1) with:
 
-4 vCPUs, 8 GB RAM allocated from the host
+4 vCPUs, 6 GB RAM allocated from the host
 Ubuntu 22.04 cloud image
 Connected to the virbr0 bridge → gets IP 192.168.122.7
 

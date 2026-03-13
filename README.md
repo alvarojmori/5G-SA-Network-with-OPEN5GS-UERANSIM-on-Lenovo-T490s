@@ -366,16 +366,20 @@ The system was benchmarked to analyze the correlation between Iperf traffic and 
 
 **System Saturation (25 Mbps):** The graph confirms a 100% CPU saturation point at 25 Mbps. Reaching this limit risks breaking the synchronization between the gNB and UPF, as the CPU can no longer keep up with packet processing.
 
-## 🛡️ Connectivity Resilience
 
-**NAS & GTP Stability:** By keeping the throughput at a recommended 18 Mbps, we prevent the "breakage" of the control plane. The connection between UE1, UE2, and gNB remains rock-solid, and the tunnel to the UPF stays synchronized.
-
-**Resource Margin:** Operating at this level provides enough overhead to handle sudden traffic spikes without affecting the core network functions (AMFs/SMFs).
 ---
 
 <img width="1725" height="714" alt="image" src="https://github.com/user-attachments/assets/f7d17a85-0ed0-4d84-a993-2069f4b787e6" />
 
 ---
+
+
+## 🛡️ Connectivity Resilience
+
+**NAS & GTP Stability:** By keeping the throughput at a recommended 18 Mbps, we prevent the "breakage" of the control plane. The connection between UE1, UE2, and gNB remains rock-solid, and the tunnel to the UPF stays synchronized.
+
+**Resource Margin:** Operating at this level provides enough overhead to handle sudden traffic spikes without affecting the core network functions (AMFs/SMFs).
+
 ---
 
 ## 🎓 Academic Context

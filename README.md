@@ -313,8 +313,7 @@ sudo tailscale up
 # Both nodes get stable IPs: 100.64.x.x
 # Access WebUI, Grafana, kubectl from anywhere
 
-<img width="1481" height="518" alt="image" src="https://github.com/user-attachments/assets/1210e7a2-5967-4e3d-8dff-60766c13cfbf" />
-
+<img width="886" height="310" alt="image" src="https://github.com/user-attachments/assets/25f693ca-8296-4c73-b53e-24bd341b6bbe" />
 
 ```
 

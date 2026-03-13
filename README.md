@@ -1,6 +1,6 @@
-<div align="center">
+<img width="1725" height="714" alt="image" src="https://github.com/user-attachments/assets/f7d17a85-0ed0-4d84-a993-2069f4b787e6" />
 
-<img width="1725" height="714" alt="image" src="https://github.com/user-attachments/assets/f7d17a85-0ed0-4d84-a993-2069f4b787e6" /><div align="center">
+<div align="center">
 
 <img src="https://img.shields.io/badge/5G-Stand_Alone-00C7B7?style=for-the-badge&logoColor=white"/>
 <img src="https://img.shields.io/badge/Kubernetes-v1.28-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white"/>
@@ -45,6 +45,7 @@ This lab changes that. It deploys a **complete, functional 5G SA Core on a singl
 ## 🏗️ Architecture Overview
 
 The lab uses a **two-node Kubernetes cluster** running entirely inside one laptop via KVM:
+
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                   Lenovo T490s (Host)                        │
@@ -162,7 +163,7 @@ The lab uses a **two-node Kubernetes cluster** running entirely inside one lapto
     <tr>
       <td><b>N6 Data Network</b></td>
       <td>UPF Gateway</td>
-      <td><code>10.41.0.X 10.42.0.X</code></td>
+      <td><code>10.41.0.X / 10.42.0.X</code></td>
       <td><code>ogstun</code></td>
       <td>Exit to iPerf3 server</td>
     </tr>
@@ -219,6 +220,7 @@ The lab uses a **two-node Kubernetes cluster** running entirely inside one lapto
 ---
 
 ## 📁 Repository Structure
+
 ```
 .
 ├── KVM-fiee/               # KVM VM automation (VIRSH scripts)
@@ -246,6 +248,7 @@ The lab uses a **two-node Kubernetes cluster** running entirely inside one lapto
 ---
 
 ### Step 1 — Create Worker1 VM
+
 ```bash
 cd KVM-fiee/
 chmod +x create_worker1.sh && ./create_worker1.sh
@@ -255,6 +258,7 @@ virsh list --all   # → worker1   running
 ---
 
 ### Step 2 — Deploy Kubernetes
+
 ```bash
 # On master (host):
 cd k8s-fiee/ && ./install_master.sh
@@ -275,19 +279,23 @@ kubectl get nodes
 ---
 
 ### Step 3 — Deploy Open5GS (5G Core)
+
 You can use the automatization script.
+
 ```bash
 kubectl apply -k open5gs-uerasim-fiee/open5gs/
 kubectl get pods -n open5gs   # all pods → Running
 
 # Register subscribers via WebUI:
- → http://localhost:3000  (add UE1 and UE2: IMSI, K, OPC, APN)
+# → http://localhost:3000  (add UE1 and UE2: IMSI, K, OPC, APN)
 ```
 
 ---
 
 ### Step 4 — Deploy UERANSIM (RAN + UEs)
+
 You can use the automatization script.
+
 ```bash
 kubectl apply -f open5gs-uerasim-fiee/ueransim/
 kubectl logs -n open5gs <gnb-pod>
@@ -297,35 +305,35 @@ kubectl logs -n open5gs <gnb-pod>
 ---
 
 ### Step 5 — Deploy Monitoring
+
 You can use the automatization script.
+
 ```bash
 kubectl apply -K monitoring/
 kubectl port-forward svc/grafana 3001:3000 -n monitoring
 # → http://localhost:3001  (admin / admin)
 ```
+
 <img width="903" height="408" alt="image" src="https://github.com/user-attachments/assets/321fe22c-cc18-4b81-b69a-1ac1d1a06f11" />
 
 ---
 
 ### Step 6 — Remote Access via Tailscale
+
 ```bash
 curl -fsSL https://tailscale.com/install.sh | sh
 sudo tailscale up
 # Both nodes get stable IPs: 100.64.x.x
 # Access WebUI, Grafana, kubectl from anywhere
 ```
+
 <img width="886" height="310" alt="image" src="https://github.com/user-attachments/assets/25f693ca-8296-4c73-b53e-24bd341b6bbe" />
 
-```
-```
 <img width="662" height="271" alt="image" src="https://github.com/user-attachments/assets/6a478bba-1a3a-4ffb-a5a0-b61b67f6ef09" />
 
-```
 ---
 
 ### Step 7 — Run Performance Tests
-```bash
-```
 
 | Scenario | UEs | Protocol | Direction |
 |----------|:---:|----------|-----------|
@@ -345,28 +353,29 @@ sudo tailscale up
 - ✅ Prometheus/Grafana throughput matched iperf3 measurements
 - ✅ Tailscale remote access confirmed from external networks
 - ✅ Lab stable across all 6 scenarios on consumer-grade hardware
-- 
+
 ---
 
-📈 CPU Variance & Throughput Analysis
+## 📈 CPU Variance & Throughput Analysis
+
 The system was benchmarked to analyze the correlation between Iperf traffic and CPU consumption. The results demonstrate a clear stability threshold:
 
-Stable Operating Zone (5–18 Mbps): The CPU scales linearly with the traffic. At the 18 Mbps mark, the system maintains a perfect balance, ensuring that the NAS (Non-Access Stratum) signaling between UEs and gNB is never interrupted.
+**Stable Operating Zone (5–18 Mbps):** The CPU scales linearly with the traffic. At the 18 Mbps mark, the system maintains a perfect balance, ensuring that the NAS (Non-Access Stratum) signaling between UEs and gNB is never interrupted.
 
-Variance & Jitter Threshold: Beyond 18 Mbps, we observe an increase in CPU variance. The processing overhead for GTP-U encapsulation starts to grow exponentially, leading to potential jitter in the User Plane.
+**Variance & Jitter Threshold:** Beyond 18 Mbps, we observe an increase in CPU variance. The processing overhead for GTP-U encapsulation starts to grow exponentially, leading to potential jitter in the User Plane.
 
-System Saturation (25 Mbps): The graph confirms a 100% CPU saturation point at 25 Mbps. Reaching this limit risks breaking the synchronization between the gNB and UPF, as the CPU can no longer keep up with packet processing.
+**System Saturation (25 Mbps):** The graph confirms a 100% CPU saturation point at 25 Mbps. Reaching this limit risks breaking the synchronization between the gNB and UPF, as the CPU can no longer keep up with packet processing.
 
-🛡️ Connectivity Resilience
-NAS & GTP Stability: By keeping the throughput at a recommended 18 Mbps, we prevent the "breakage" of the control plane. The connection between UE1, UE2, and gNB remains rock-solid, and the tunnel to the UPF stays synchronized.
+## 🛡️ Connectivity Resilience
 
-Resource Margin: Operating at this level provides enough overhead to handle sudden traffic spikes without affecting the core network functions (AMFs/SMFs).
+**NAS & GTP Stability:** By keeping the throughput at a recommended 18 Mbps, we prevent the "breakage" of the control plane. The connection between UE1, UE2, and gNB remains rock-solid, and the tunnel to the UPF stays synchronized.
+
+**Resource Margin:** Operating at this level provides enough overhead to handle sudden traffic spikes without affecting the core network functions (AMFs/SMFs).
 
 <img width="1725" height="714" alt="image" src="https://github.com/user-attachments/assets/3fb970b7-e48c-4520-b17b-ce75ee50317d" />
 
-
-
 ---
+
 ## 🎓 Academic Context
 
 Undergraduate thesis — **Electronic Engineering**, FIEE, Universidad Nacional del Callao (UNAC), Peru.

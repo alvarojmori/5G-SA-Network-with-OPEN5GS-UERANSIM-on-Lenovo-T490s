@@ -115,7 +115,7 @@ The lab uses a **two-node Kubernetes cluster** running entirely inside one lapto
     <tr>
       <td rowspan="2"><b>Control Plane N2</b></td>
       <td>AMF / NRF / UDM / AUSF</td>
-      <td><code>10.42.0.x</code></td>
+      <td><code>10.10.2.200</code></td>
       <td><code>n2br</code></td>
       <td>N2 signaling</td>
     </tr>
@@ -128,7 +128,7 @@ The lab uses a **two-node Kubernetes cluster** running entirely inside one lapto
     <tr>
       <td rowspan="3"><b>User Plane N3/GTP</b></td>
       <td>UERANSIM gNB</td>
-      <td><code>10.43.0.1</code></td>
+      <td><code>10.10.3.1</code></td>
       <td><code>n3br</code></td>
       <td>GTP-U tunnel entry</td>
     </tr>

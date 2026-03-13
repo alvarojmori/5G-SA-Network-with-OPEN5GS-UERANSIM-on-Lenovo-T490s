@@ -302,6 +302,7 @@ kubectl apply -K monitoring/
 kubectl port-forward svc/grafana 3001:3000 -n monitoring
 # → http://localhost:3001  (admin / admin)
 ```
+<img width="903" height="408" alt="image" src="https://github.com/user-attachments/assets/321fe22c-cc18-4b81-b69a-1ac1d1a06f11" />
 
 ---
 
@@ -311,6 +312,10 @@ curl -fsSL https://tailscale.com/install.sh | sh
 sudo tailscale up
 # Both nodes get stable IPs: 100.64.x.x
 # Access WebUI, Grafana, kubectl from anywhere
+
+<img width="1481" height="518" alt="image" src="https://github.com/user-attachments/assets/1210e7a2-5967-4e3d-8dff-60766c13cfbf" />
+
+
 ```
 
 ---

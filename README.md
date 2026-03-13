@@ -160,7 +160,7 @@ The lab uses a **two-node Kubernetes cluster** running entirely inside one lapto
     <tr>
       <td><b>N6 Data Network</b></td>
       <td>UPF Gateway</td>
-      <td><code>10.45.0.1</code></td>
+      <td><code>10.41.0.X 10.42.0.X</code></td>
       <td><code>ogstun</code></td>
       <td>Exit to iPerf3 server</td>
     </tr>

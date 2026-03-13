@@ -372,7 +372,7 @@ The system was benchmarked to analyze the correlation between Iperf traffic and 
 
 **Resource Margin:** Operating at this level provides enough overhead to handle sudden traffic spikes without affecting the core network functions (AMFs/SMFs).
 
-<img width="1725" height="714" alt="image" src="https://github.com/user-attachments/assets/3fb970b7-e48c-4520-b17b-ce75ee50317d" />
+<img width="900" alt="CPU vs Iperf" src="./assets/cpu_vs_iperf.png" />
 
 ---
 

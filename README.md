@@ -273,6 +273,7 @@ kubectl get nodes
 ---
 
 ### Step 3 — Deploy Open5GS (5G Core)
+You can use the automatization script.
 ```bash
 kubectl apply -f open5gs-uerasim-fiee/open5gs/
 kubectl get pods -n open5gs   # all pods → Running
@@ -285,6 +286,7 @@ kubectl port-forward svc/webui 3000:3000 -n open5gs
 ---
 
 ### Step 4 — Deploy UERANSIM (RAN + UEs)
+You can use the automatization script.
 ```bash
 kubectl apply -f open5gs-uerasim-fiee/ueransim/
 kubectl logs -n open5gs <gnb-pod>
@@ -294,9 +296,9 @@ kubectl logs -n open5gs <gnb-pod>
 ---
 
 ### Step 5 — Deploy Monitoring
+You can use the automatization script.
 ```bash
-kubectl apply -f monitoring/prometheus/
-kubectl apply -f monitoring/grafana/
+kubectl apply -K monitoring/
 kubectl port-forward svc/grafana 3001:3000 -n monitoring
 # → http://localhost:3001  (admin / admin)
 ```

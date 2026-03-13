@@ -102,47 +102,60 @@ The lab uses a **two-node Kubernetes cluster** running entirely inside one lapto
     <tr>
       <td rowspan="2"><b>K8s — Flannel</b></td>
       <td>Pod internal range</td>
-      <td><code>10.244.0.0/24</code></td>
+      <td><code>10.244.0.0/16</code></td>
       <td><code>cni0 / flannel.1</code></td>
       <td>Pod-to-pod overlay network</td>
     </tr>
     <tr>
       <td>WebUI / MongoDB</td>
-      <td><code>10.244.0.x</code></td>
+      <td><code>10.244.0.38</code> / <code>.29</code></td>
       <td><code>eth0 (pod)</code></td>
-      <td>Admin access</td>
+      <td>Admin access / Database</td>
     </tr>
     <tr>
       <td rowspan="2"><b>Control Plane N2</b></td>
-      <td>AMF / NRF / UDM / AUSF</td>
+      <td>AMF</td>
       <td><code>10.10.2.200</code></td>
-      <td><code>n2br</code></td>
-      <td>N2 signaling</td>
+      <td><code>n2 (multus)</code></td>
+      <td>NGAP signaling entry point</td>
     </tr>
     <tr>
+      <td>UERANSIM gNB</td>
+      <td><code>10.10.2.231</code></td>
+      <td><code>n2 (multus)</code></td>
+      <td>SCTP association to AMF</td>
+    </tr>
+    <tr>
+      <td rowspan="2"><b>Control Plane N4</b></td>
       <td>SMF01 / SMF02</td>
-      <td><code>10.10.4.101x</code></td>
-      <td><code>n4br</code></td>
-      <td>Session management N4</td>
+      <td><code>10.10.4.101</code> / <code>.102</code></td>
+      <td><code>n4 (multus)</code></td>
+      <td>PFCP Session Management</td>
+    </tr>
+    <tr>
+      <td>UPF01 / UPF02</td>
+      <td><code>10.10.4.1</code> / <code>.2</code></td>
+      <td><code>n4 (multus)</code></td>
+      <td>PFCP Reporting / Association</td>
     </tr>
     <tr>
       <td rowspan="3"><b>User Plane N3/GTP</b></td>
       <td>UERANSIM gNB</td>
-      <td><code>10.10.3.1</code></td>
-      <td><code>n3br</code></td>
-      <td>GTP-U tunnel entry</td>
+      <td><code>10.10.3.231</code></td>
+      <td><code>n3 (multus)</code></td>
+      <td>GTP-U RAN side (Source)</td>
     </tr>
     <tr>
       <td>UPF01</td>
-      <td><code>10.43.0.101</code></td>
-      <td><code>n3br</code></td>
-      <td>GTP-U N3 — slice 1</td>
+      <td><code>10.10.3.1</code></td>
+      <td><code>n3 (multus)</code></td>
+      <td>GTP-U Core side — Instance 1</td>
     </tr>
     <tr>
       <td>UPF02</td>
-      <td><code>10.43.0.102</code></td>
-      <td><code>n3br</code></td>
-      <td>GTP-U N3 — slice 2</td>
+      <td><code>10.10.3.2</code></td>
+      <td><code>n3 (multus)</code></td>
+      <td>GTP-U Core side — Instance 2</td>
     </tr>
     <tr>
       <td><b>N6 Data Network</b></td>

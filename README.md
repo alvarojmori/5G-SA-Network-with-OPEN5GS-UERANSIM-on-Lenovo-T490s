@@ -1,7 +1,5 @@
 <div align="center">
 
-<img width="1725" height="714" alt="image" src="https://github.com/user-attachments/assets/f7d17a85-0ed0-4d84-a993-2069f4b787e6" />
-
 <br/>
 
 <img src="https://img.shields.io/badge/5G-Stand_Alone-00C7B7?style=for-the-badge&logoColor=white"/>
@@ -373,9 +371,11 @@ The system was benchmarked to analyze the correlation between Iperf traffic and 
 **NAS & GTP Stability:** By keeping the throughput at a recommended 18 Mbps, we prevent the "breakage" of the control plane. The connection between UE1, UE2, and gNB remains rock-solid, and the tunnel to the UPF stays synchronized.
 
 **Resource Margin:** Operating at this level provides enough overhead to handle sudden traffic spikes without affecting the core network functions (AMFs/SMFs).
+---
 
-<img width="900" alt="CPU vs Iperf chart" src="./cpu_vs_iperf.png" />
+<img width="1725" height="714" alt="image" src="https://github.com/user-attachments/assets/f7d17a85-0ed0-4d84-a993-2069f4b787e6" />
 
+---
 ---
 
 ## 🎓 Academic Context

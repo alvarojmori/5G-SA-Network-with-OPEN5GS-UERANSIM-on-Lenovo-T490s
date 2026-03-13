@@ -1,4 +1,4 @@
-<div align="center">
+<img width="1725" height="714" alt="image" src="https://github.com/user-attachments/assets/f7d17a85-0ed0-4d84-a993-2069f4b787e6" /><div align="center">
 
 <img src="https://img.shields.io/badge/5G-Stand_Alone-00C7B7?style=for-the-badge&logoColor=white"/>
 <img src="https://img.shields.io/badge/Kubernetes-v1.28-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white"/>
@@ -344,6 +344,20 @@ sudo tailscale up
 - ✅ Tailscale remote access confirmed from external networks
 - ✅ Lab stable across all 6 scenarios on consumer-grade hardware
 
+      🚀 Network Throughput
+          Simultaneous Connections: Successfully tested with UE1 and UE2 connected at the same time.
+
+          Stable Bandwidth: Maintained a consistent data rate of 18 Mbps without cluster saturation and the laptop cpu estable 
+---
+  <img width="1725" height="714" alt="image" src="https://github.com/user-attachments/assets/edec6d66-cf3a-4bec-98ce-36d4635e5cd7" />
+
+
+      🛡️ System Stability
+         NAS Integrity: The signaling link between UEs (1 & 2) and the gNB remains robust. No signaling drops or NAS protocol breaks were observed during active sessions.
+---
+         N3 User Plane: High stability in the GTP-U tunnel between the gNB and UPF. The Multus-based network planning prevents bottlenecks, ensuring that user data does not interfere with the Kubernetes control plane.
+---
+         Resource Management: The cluster avoids "shaking" or crashing under load, keeping the communication between the gNB and the Core (AMF/SMF/UPF) fully synchronized and responsive.
 ---
 
 ## 🎓 Academic Context

@@ -58,13 +58,30 @@ Why two nodes instead of one?
 Running Core NFs (AMF, UPF, etc.) on the worker node and management components (MongoDB, WebUI, Prometheus) on the master node isolates the 5G data plane from the control plane — the same architectural principle used in production Telco Cloud deployments.
 
 ⚙️ IP Planning
-SegmentElement / PodIP AddressInterfaceRoleHost / KVMalvarolap (Master)192.168.122.1/24virbr0iPerf GatewayWorker1 (KVM VM)192.168.122.7/24eth0 / br0Core + RAN nodeK8s (Flannel)Pod internal range10.244.0.0/24cni0 / flannel.1K8s internalWebUI / MongoDB10.244.0.xeth0 (Pod)Admin accessControl PlaneAMF / NRF / UDM10.42.0.xn2br bridgeN2 signalingSMF01 / SMF0210.42.0.1xn4br bridgeSession mgmt N4User PlaneUERANSIM gNB10.43.0.1n3br bridgeGTP tunnel entryUPF01 / UPF0210.43.0.101/102n3br bridgeGTP N3 terminationN6 (Data Net)UPF Gateway10.45.0.1ogstunExit to iPerf
 
-
-
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SEGMENT           ELEMENT / POD        IP ADDRESS          INTERFACE       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Host / KVM        alvarolap (Master)   192.168.122.1/24    virbr0          │
+│                    worker1   (VM)       192.168.122.7/24    eth0 / br0      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  K8s Flannel       Pod range            10.244.0.0/24       cni0/flannel.1  │
+│                    WebUI / MongoDB      10.244.0.x          eth0 (pod)      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Control Plane     AMF / NRF / UDM      10.42.0.x (fixed)   n2br bridge    │
+│  (N2 signaling)    SMF01 / SMF02        10.42.0.1x          n4br bridge     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  User Plane        UERANSIM gNB         10.43.0.1           n3br bridge     │
+│  (GTP / N3)        UPF01                10.43.0.101         n3br bridge     │
+│                    UPF02                10.43.0.102         n3br bridge     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  N6 Data Network   UPF Gateway          10.45.0.1           ogstun          │
+└─────────────────────────────────────────────────────────────────────────────┘
 
 🧰 Tech Stack
-ToolVersionPurposeOpen5GSLatest5G SA Core (AMF, SMF, UPF, NRF, AUSF, UDM, PCF, NSSF)UERANSIMLatestgNB + UE emulation (nr-gnb, nr-ue)Kubernetesv1.28Container orchestration (kubeadm)KVM / QEMU-Hypervisor for Worker1 VMFlannel + Multus-CNI networking (pod-to-pod + multi-interface)OpenEBS-Persistent storage for MongoDBMongoDB-Subscriber database (IMSI, K, OPC)Prometheus-Metrics collection (UPF traffic, pod resources)Grafana-Real-time dashboards (throughput, CPU, memory)Tailscale-Secure mesh VPN for remote cluster accessWireGuard-Encrypted transport layer under Tailscaleiperf3-Throughput & latency benchmarkingUbuntu22.04 LTSOS on host and all VMs
+5G Core & RAN
+ToolRoleOpen5GS5G SA Core — AMF, SMF, UPF, NRF, AUSF, UDM, UDR, PCF, BSF, NSSFUERANSIMRadio emulation — gNB (nr-gnb) + UE (nr-ue) × 2 subscribersMongoDBSubscriber database (IMSI, K key, OPC, APN, slice config)
+
 
 📁 Repository Structure
 .

@@ -312,7 +312,7 @@ curl -fsSL https://tailscale.com/install.sh | sh
 sudo tailscale up
 # Both nodes get stable IPs: 100.64.x.x
 # Access WebUI, Grafana, kubectl from anywhere
-
+```
 <img width="886" height="310" alt="image" src="https://github.com/user-attachments/assets/25f693ca-8296-4c73-b53e-24bd341b6bbe" />
 
 ```

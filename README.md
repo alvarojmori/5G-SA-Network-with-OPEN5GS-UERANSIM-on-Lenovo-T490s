@@ -343,23 +343,28 @@ sudo tailscale up
 - ✅ Prometheus/Grafana throughput matched iperf3 measurements
 - ✅ Tailscale remote access confirmed from external networks
 - ✅ Lab stable across all 6 scenarios on consumer-grade hardware
-
-      🚀 Network Throughput
-          Simultaneous Connections: Successfully tested with UE1 and UE2 connected at the same time.
-
-          Stable Bandwidth: Maintained a consistent data rate of 18 Mbps without cluster saturation and the laptop cpu estable 
----
-  <img width="1725" height="714" alt="image" src="https://github.com/user-attachments/assets/edec6d66-cf3a-4bec-98ce-36d4635e5cd7" />
-
-
-      🛡️ System Stability
-         NAS Integrity: The signaling link between UEs (1 & 2) and the gNB remains robust. No signaling drops or NAS protocol breaks were observed during active sessions.
----
-         N3 User Plane: High stability in the GTP-U tunnel between the gNB and UPF. The Multus-based network planning prevents bottlenecks, ensuring that user data does not interfere with the Kubernetes control plane.
----
-         Resource Management: The cluster avoids "shaking" or crashing under load, keeping the communication between the gNB and the Core (AMF/SMF/UPF) fully synchronized and responsive.
+- 
 ---
 
+📈 CPU Variance & Throughput Analysis
+The system was benchmarked to analyze the correlation between Iperf traffic and CPU consumption. The results demonstrate a clear stability threshold:
+
+Stable Operating Zone (5–18 Mbps): The CPU scales linearly with the traffic. At the 18 Mbps mark, the system maintains a perfect balance, ensuring that the NAS (Non-Access Stratum) signaling between UEs and gNB is never interrupted.
+
+Variance & Jitter Threshold: Beyond 18 Mbps, we observe an increase in CPU variance. The processing overhead for GTP-U encapsulation starts to grow exponentially, leading to potential jitter in the User Plane.
+
+System Saturation (25 Mbps): The graph confirms a 100% CPU saturation point at 25 Mbps. Reaching this limit risks breaking the synchronization between the gNB and UPF, as the CPU can no longer keep up with packet processing.
+
+🛡️ Connectivity Resilience
+NAS & GTP Stability: By keeping the throughput at a recommended 18 Mbps, we prevent the "breakage" of the control plane. The connection between UE1, UE2, and gNB remains rock-solid, and the tunnel to the UPF stays synchronized.
+
+Resource Margin: Operating at this level provides enough overhead to handle sudden traffic spikes without affecting the core network functions (AMFs/SMFs).
+
+<img width="1725" height="714" alt="image" src="https://github.com/user-attachments/assets/3fb970b7-e48c-4520-b17b-ce75ee50317d" />
+
+
+
+---
 ## 🎓 Academic Context
 
 Undergraduate thesis — **Electronic Engineering**, FIEE, Universidad Nacional del Callao (UNAC), Peru.

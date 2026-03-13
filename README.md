@@ -59,28 +59,127 @@ Running Core NFs (AMF, UPF, etc.) on the worker node and management components (
 
 ⚙️ IP Planning
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  SEGMENT           ELEMENT / POD        IP ADDRESS          INTERFACE       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  Host / KVM        alvarolap (Master)   192.168.122.1/24    virbr0          │
-│                    worker1   (VM)       192.168.122.7/24    eth0 / br0      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  K8s Flannel       Pod range            10.244.0.0/24       cni0/flannel.1  │
-│                    WebUI / MongoDB      10.244.0.x          eth0 (pod)      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  Control Plane     AMF / NRF / UDM      10.42.0.x (fixed)   n2br bridge    │
-│  (N2 signaling)    SMF01 / SMF02        10.42.0.1x          n4br bridge     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  User Plane        UERANSIM gNB         10.43.0.1           n3br bridge     │
-│  (GTP / N3)        UPF01                10.43.0.101         n3br bridge     │
-│                    UPF02                10.43.0.102         n3br bridge     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  N6 Data Network   UPF Gateway          10.45.0.1           ogstun          │
-└─────────────────────────────────────────────────────────────────────────────┘
+<table>
+  <thead>
+    <tr>
+      <th>Segment</th>
+      <th>Element / Pod</th>
+      <th>IP Address</th>
+      <th>Interface</th>
+      <th>Role</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="2"><b>Host / KVM</b></td>
+      <td>alvarolap (Master)</td>
+      <td><code>192.168.122.1/24</code></td>
+      <td><code>virbr0</code></td>
+      <td>iPerf gateway · K8s control plane</td>
+    </tr>
+    <tr>
+      <td>worker1 (KVM VM)</td>
+      <td><code>192.168.122.7/24</code></td>
+      <td><code>eth0 / br0</code></td>
+      <td>Runs Core NFs + UERANSIM</td>
+    </tr>
+    <tr>
+      <td rowspan="2"><b>K8s — Flannel</b></td>
+      <td>Pod internal range</td>
+      <td><code>10.244.0.0/24</code></td>
+      <td><code>cni0 / flannel.1</code></td>
+      <td>K8s pod-to-pod network</td>
+    </tr>
+    <tr>
+      <td>WebUI / MongoDB</td>
+      <td><code>10.244.0.x</code></td>
+      <td><code>eth0 (pod)</code></td>
+      <td>Admin access</td>
+    </tr>
+    <tr>
+      <td rowspan="2"><b>Control Plane (N2)</b></td>
+      <td>AMF / NRF / UDM / AUSF</td>
+      <td><code>10.42.0.x</code></td>
+      <td><code>n2br</code></td>
+      <td>N2 signaling interface</td>
+    </tr>
+    <tr>
+      <td>SMF01 / SMF02</td>
+      <td><code>10.42.0.1x</code></td>
+      <td><code>n4br</code></td>
+      <td>Session management N4</td>
+    </tr>
+    <tr>
+      <td rowspan="3"><b>User Plane (N3 / GTP)</b></td>
+      <td>UERANSIM gNB</td>
+      <td><code>10.43.0.1</code></td>
+      <td><code>n3br</code></td>
+      <td>GTP-U tunnel entry point</td>
+    </tr>
+    <tr>
+      <td>UPF01</td>
+      <td><code>10.43.0.101</code></td>
+      <td><code>n3br</code></td>
+      <td>GTP-U N3 termination — slice 1</td>
+    </tr>
+    <tr>
+      <td>UPF02</td>
+      <td><code>10.43.0.102</code></td>
+      <td><code>n3br</code></td>
+      <td>GTP-U N3 termination — slice 2</td>
+    </tr>
+    <tr>
+      <td><b>N6 — Data Network</b></td>
+      <td>UPF Gateway</td>
+      <td><code>10.45.0.1</code></td>
+      <td><code>ogstun</code></td>
+      <td>Exit toward iPerf3 server</td>
+    </tr>
+  </tbody>
+</table>
+
+💡 Key design choice: The cluster binds to the fixed KVM bridge IP 192.168.122.1 — not the Wi-Fi IP.
+This keeps the cluster alive even when the laptop switches networks.
 
 🧰 Tech Stack
-5G Core & RAN
-ToolRoleOpen5GS5G SA Core — AMF, SMF, UPF, NRF, AUSF, UDM, UDR, PCF, BSF, NSSFUERANSIMRadio emulation — gNB (nr-gnb) + UE (nr-ue) × 2 subscribersMongoDBSubscriber database (IMSI, K key, OPC, APN, slice config)
+<table>
+  <thead>
+    <tr><th colspan="3">🔵 5G Core &amp; RAN</th></tr>
+    <tr><th>Tool</th><th>Version</th><th>Role</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><b>Open5GS</b></td><td>latest</td><td>Full 5G SA Core — AMF, SMF×2, UPF×2, NRF, AUSF, UDM, UDR, PCF, BSF, NSSF</td></tr>
+    <tr><td><b>UERANSIM</b></td><td>latest</td><td>Radio emulation — gNB (<code>nr-gnb</code>) + 2× UE (<code>nr-ue</code>) — 5G-AKA auth + PDU sessions</td></tr>
+    <tr><td><b>MongoDB</b></td><td>6.x</td><td>Subscriber database — IMSI, K key, OPC, APN, S-NSSAI slice config</td></tr>
+  </tbody>
+</table>
+<table>
+  <thead>
+    <tr><th colspan="3">🟠 Infrastructure &amp; Orchestration</th></tr>
+    <tr><th>Tool</th><th>Version</th><th>Role</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><b>Kubernetes</b></td><td>v1.28</td><td>Container orchestration — <code>kubeadm</code> multi-node cluster</td></tr>
+    <tr><td><b>KVM / QEMU</b></td><td>—</td><td>Hypervisor for Worker1 VM — VIRSH automation scripts included</td></tr>
+    <tr><td><b>Flannel</b></td><td>—</td><td>Pod-to-pod CNI overlay network</td></tr>
+    <tr><td><b>Multus</b></td><td>—</td><td>Multi-interface CNI — enables separate N2, N3, N4 bridge interfaces per pod</td></tr>
+    <tr><td><b>OpenEBS</b></td><td>—</td><td>Persistent volume storage — keeps MongoDB data across pod restarts</td></tr>
+    <tr><td><b>Ubuntu</b></td><td>22.04 LTS</td><td>OS on host laptop and all VMs</td></tr>
+  </tbody>
+</table>
+<table>
+  <thead>
+    <tr><th colspan="3">🟢 Observability &amp; Security</th></tr>
+    <tr><th>Tool</th><th>Version</th><th>Role</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><b>Prometheus</b></td><td>—</td><td>Scrapes UPF metrics — bytes TX/RX, active GTP tunnels, PDU sessions</td></tr>
+    <tr><td><b>Grafana</b></td><td>—</td><td>Real-time dashboards — throughput per UE, CPU%, RAM across nodes</td></tr>
+    <tr><td><b>Tailscale</b></td><td>—</td><td>Zero-trust mesh VPN — secure remote access to cluster from anywhere</td></tr>
+    <tr><td><b>WireGuard</b></td><td>kernel 5.6+</td><td>Encrypted transport layer used by Tailscale (Curve25519 + ChaCha20)</td></tr>
+    <tr><td><b>iperf3</b></td><td>—</td><td>TCP/UDP benchmarking — 6 experimental scenarios (1 UE and 2 UE)</td></tr>
+  </tbody>
+</table>
 
 
 📁 Repository Structure
@@ -110,7 +209,12 @@ ToolRoleOpen5GS5G SA Core — AMF, SMF, UPF, NRF, AUSF, UDM, UDR, PCF, BSF, NSSF
 
 🚀 Deployment Guide (Step by Step)
 Prerequisites
+Step 1 — Create the Worker1 Virtual Machine
 
+Laptop with 8+ CPU threads and 16 GB RAM (tested on Lenovo T490s)
+Ubuntu 22.04 LTS installed natively (not inside a VM)
+KVM/QEMU enabled (kvm-ok should return "KVM acceleration can be used")
+Git, curl, bash
 Laptop with 8+ CPU threads and 16 GB RAM (tested on Lenovo T490s)
 Ubuntu 22.04 LTS installed natively (not inside a VM)
 KVM/QEMU enabled (kvm-ok should return "KVM acceleration can be used")

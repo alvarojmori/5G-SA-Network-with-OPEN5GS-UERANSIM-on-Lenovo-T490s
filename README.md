@@ -121,7 +121,7 @@ The lab uses a **two-node Kubernetes cluster** running entirely inside one lapto
     </tr>
     <tr>
       <td>SMF01 / SMF02</td>
-      <td><code>10.42.0.1x</code></td>
+      <td><code>10.10.4.101x</code></td>
       <td><code>n4br</code></td>
       <td>Session management N4</td>
     </tr>

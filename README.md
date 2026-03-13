@@ -1,63 +1,79 @@
 <div align="center">
+
 <img src="https://img.shields.io/badge/5G-Stand_Alone-00C7B7?style=for-the-badge&logoColor=white"/>
 <img src="https://img.shields.io/badge/Kubernetes-v1.28-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white"/>
 <img src="https://img.shields.io/badge/Open5GS-3GPP_SA-FF6B35?style=for-the-badge&logoColor=white"/>
-<img src="https://img.shields.io/badge/UERANSIM-gNB_+_UE-4CAF50?style=for-the-badge&logoColor=white"/>
+<img src="https://img.shields.io/badge/UERANSIM-gNB_%2B_UE-4CAF50?style=for-the-badge&logoColor=white"/>
 <img src="https://img.shields.io/badge/Ubuntu-22.04_LTS-E95420?style=for-the-badge&logo=ubuntu&logoColor=white"/>
 <img src="https://img.shields.io/badge/Tailscale-Zero_Trust-5433FF?style=for-the-badge&logo=tailscale&logoColor=white"/>
-<img src="https://img.shields.io/badge/Prometheus-Grafana-F46800?style=for-the-badge&logo=prometheus&logoColor=white"/>
+<img src="https://img.shields.io/badge/Prometheus_%2B_Grafana-Observability-F46800?style=for-the-badge&logo=prometheus&logoColor=white"/>
 
-🛰️ 5G SA Network Lab — Open5GS + UERANSIM on Kubernetes
-A complete, portable 5G Stand Alone Core running on a single Lenovo T490s laptop
-Academic thesis project — FIEE, Universidad Nacional del Callao (UNAC), Peru — 2026
-"Virtual 5G Stand Alone Laboratory in Kubernetes for Two Subscribers as a Tool for Improving Professional Competencies"
+<br/><br/>
+
+# 🛰️ 5G SA Network Lab
+## Open5GS + UERANSIM on Kubernetes
+
+**A complete, portable 5G Stand Alone Core running on a single Lenovo T490s**
+
+*Academic thesis — FIEE, Universidad Nacional del Callao (UNAC), Peru — 2026*
+
+> *"Virtual 5G SA Laboratory in Kubernetes for Two Subscribers as a Tool for Improving Professional Competencies"*
+
 </div>
 
-🧭 What is this project?
-This repository contains everything needed to deploy a fully functional 5G Stand Alone (SA) Core Network on a regular laptop using only open-source tools and Kubernetes.
-Instead of expensive hardware or cloud infrastructure, this lab runs on a Lenovo ThinkPad T490s — the kind of machine any engineering student might already own. The goal is to give students and engineers hands-on experience with the same concepts used in real-world Telco Cloud environments.
+---
 
-💡 Who is this for?
+## 🧭 What is this project?
 
-Telecom engineering students who want real 5G hands-on practice
-Engineers preparing for Core Network / Cloud-Native Network roles
-Researchers who need a reproducible 5G SA testbed without a data center
-Anyone curious about how a 5G Core actually works
+5G Stand Alone (SA) is no longer future tech — in Peru, operators like **Entel, Claro, Telefónica and Bitel** are actively evolving toward a pure 5G SA Core, replacing virtualized EPC hardware from Huawei and ZTE with cloud-native architectures from Nokia and Ericsson.
 
-🏗️ Architecture Overview
-The lab uses a two-node Kubernetes cluster running entirely inside one laptop via KVM virtualization:
+The problem? **Hands-on 5G training is locked behind expensive hardware** that only operators and vendors can afford. Students graduate having studied 5G only in theory — no Core config, no subscriber setup, no real PDU sessions.
 
-┌────────────────────────────────────────────────────────────────┐
-│                    Lenovo T490s (Host)                         │
-│              Intel i7-8665U  │  16 GB RAM                      │
-│                                                                │
-│  ┌─────────────────────────────────────────────────────────┐  │
-│  │  MASTER NODE — alvarolap (192.168.122.1)                │  │
-│  │                                                         │  │
-│  │   [MongoDB Pod]   [WebUI Pod]   [iPerf3 Server]         │  │
-│  │   [Prometheus]    [Grafana]     [kube-system pods]      │  │
-│  └──────────────────────┬──────────────────────────────────┘  │
-│                         │  KVM Bridge (br0 / virbr0)          │
-│  ┌──────────────────────▼──────────────────────────────────┐  │
-│  │  WORKER NODE — worker1 KVM VM (192.168.122.7)           │  │
-│  │                                                         │  │
-│  │  ┌─── 5G Core (Open5GS) ──────────────────────────┐    │  │
-│  │  │  AMF │ SMF01 │ SMF02 │ UPF01 │ UPF02           │    │  │
-│  │  │  NRF │ AUSF  │ UDM   │ UDR   │ PCF │ BSF       │    │  │
-│  │  └────────────────────────────────────────────────┘    │  │
-│  │                                                         │  │
-│  │  ┌─── Radio Access (UERANSIM) ─────────────────────┐   │  │
-│  │  │  gNB (nr-gnb)  │  UE1 (nr-ue)  │  UE2 (nr-ue)  │   │  │
-│  │  └────────────────────────────────────────────────┘    │  │
-│  └─────────────────────────────────────────────────────────┘  │
-│                                                                │
-│  Remote Access: ──── Tailscale VPN (WireGuard) ─────────────► │
-└────────────────────────────────────────────────────────────────┘
+This lab changes that. It deploys a **complete, functional 5G SA Core on a single student laptop** — no data center, no vendor license, no budget. Every concept operators run daily is here: AMF, SMF, UPF, GTP tunnels, 5G-AKA authentication, PDU sessions, and real-time QoS dashboards.
 
-Why two nodes instead of one?
-Running Core NFs (AMF, UPF, etc.) on the worker node and management components (MongoDB, WebUI, Prometheus) on the master node isolates the 5G data plane from the control plane — the same architectural principle used in production Telco Cloud deployments.
+**💡 Who is this for?**
 
-⚙️ IP Planning
+- 📡 Telecom students who want real 5G Core hands-on practice before entering the job market
+- ☁️ Engineers preparing for Core Network / Telco Cloud / Kubernetes roles
+- 🎓 Professors looking for a portable, reproducible 5G lab for their courses
+- 🔬 Researchers who need a 5G SA testbed without a data center
+
+---
+
+## 🏗️ Architecture Overview
+
+The lab uses a **two-node Kubernetes cluster** running entirely inside one laptop via KVM:
+```
+┌──────────────────────────────────────────────────────────────┐
+│                   Lenovo T490s (Host)                        │
+│             Intel i7-8665U  ·  16 GB RAM                     │
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐   │
+│  │  MASTER NODE — alvarolap  (192.168.122.1)             │   │
+│  │  [MongoDB] [WebUI] [iPerf3] [Prometheus] [Grafana]    │   │
+│  └────────────────────┬──────────────────────────────────┘   │
+│                       │  KVM Bridge  br0 / virbr0            │
+│  ┌────────────────────▼──────────────────────────────────┐   │
+│  │  WORKER NODE — worker1 KVM VM  (192.168.122.7)        │   │
+│  │                                                       │   │
+│  │  ┌── 5G Core (Open5GS) ────────────────────────────┐  │   │
+│  │  │  AMF · SMF01 · SMF02 · UPF01 · UPF02            │  │   │
+│  │  │  NRF · AUSF · UDM  · UDR  · PCF · BSF           │  │   │
+│  │  └─────────────────────────────────────────────────┘  │   │
+│  │  ┌── Radio Access (UERANSIM) ──────────────────────┐  │   │
+│  │  │  gNB (nr-gnb) · UE1 (nr-ue) · UE2 (nr-ue)      │  │   │
+│  │  └─────────────────────────────────────────────────┘  │   │
+│  └───────────────────────────────────────────────────────┘   │
+│                                                              │
+│  Remote: ────── Tailscale VPN (WireGuard) ─────────────────► │
+└──────────────────────────────────────────────────────────────┘
+```
+
+> **Why two nodes?** Core NFs on worker1 + management on master = data plane isolated from control plane. Same principle used in production Telco Cloud.
+
+---
+
+## ⚙️ IP Planning
 
 <table>
   <thead>
@@ -75,7 +91,7 @@ Running Core NFs (AMF, UPF, etc.) on the worker node and management components (
       <td>alvarolap (Master)</td>
       <td><code>192.168.122.1/24</code></td>
       <td><code>virbr0</code></td>
-      <td>iPerf gateway · K8s control plane</td>
+      <td>K8s control plane · iPerf gateway</td>
     </tr>
     <tr>
       <td>worker1 (KVM VM)</td>
@@ -88,7 +104,7 @@ Running Core NFs (AMF, UPF, etc.) on the worker node and management components (
       <td>Pod internal range</td>
       <td><code>10.244.0.0/24</code></td>
       <td><code>cni0 / flannel.1</code></td>
-      <td>K8s pod-to-pod network</td>
+      <td>Pod-to-pod overlay network</td>
     </tr>
     <tr>
       <td>WebUI / MongoDB</td>
@@ -97,11 +113,11 @@ Running Core NFs (AMF, UPF, etc.) on the worker node and management components (
       <td>Admin access</td>
     </tr>
     <tr>
-      <td rowspan="2"><b>Control Plane (N2)</b></td>
+      <td rowspan="2"><b>Control Plane N2</b></td>
       <td>AMF / NRF / UDM / AUSF</td>
       <td><code>10.42.0.x</code></td>
       <td><code>n2br</code></td>
-      <td>N2 signaling interface</td>
+      <td>N2 signaling</td>
     </tr>
     <tr>
       <td>SMF01 / SMF02</td>
@@ -110,38 +126,40 @@ Running Core NFs (AMF, UPF, etc.) on the worker node and management components (
       <td>Session management N4</td>
     </tr>
     <tr>
-      <td rowspan="3"><b>User Plane (N3 / GTP)</b></td>
+      <td rowspan="3"><b>User Plane N3/GTP</b></td>
       <td>UERANSIM gNB</td>
       <td><code>10.43.0.1</code></td>
       <td><code>n3br</code></td>
-      <td>GTP-U tunnel entry point</td>
+      <td>GTP-U tunnel entry</td>
     </tr>
     <tr>
       <td>UPF01</td>
       <td><code>10.43.0.101</code></td>
       <td><code>n3br</code></td>
-      <td>GTP-U N3 termination — slice 1</td>
+      <td>GTP-U N3 — slice 1</td>
     </tr>
     <tr>
       <td>UPF02</td>
       <td><code>10.43.0.102</code></td>
       <td><code>n3br</code></td>
-      <td>GTP-U N3 termination — slice 2</td>
+      <td>GTP-U N3 — slice 2</td>
     </tr>
     <tr>
-      <td><b>N6 — Data Network</b></td>
+      <td><b>N6 Data Network</b></td>
       <td>UPF Gateway</td>
       <td><code>10.45.0.1</code></td>
       <td><code>ogstun</code></td>
-      <td>Exit toward iPerf3 server</td>
+      <td>Exit to iPerf3 server</td>
     </tr>
   </tbody>
 </table>
 
-💡 Key design choice: The cluster binds to the fixed KVM bridge IP 192.168.122.1 — not the Wi-Fi IP.
-This keeps the cluster alive even when the laptop switches networks.
+> ⚠️ **Key design choice:** Cluster binds to the **fixed KVM bridge IP** `192.168.122.1` — not the Wi-Fi IP. The cluster stays alive even when the laptop changes networks.
 
-🧰 Tech Stack
+---
+
+## 🧰 Tech Stack
+
 <table>
   <thead>
     <tr><th colspan="3">🔵 5G Core &amp; RAN</th></tr>
@@ -149,200 +167,194 @@ This keeps the cluster alive even when the laptop switches networks.
   </thead>
   <tbody>
     <tr><td><b>Open5GS</b></td><td>latest</td><td>Full 5G SA Core — AMF, SMF×2, UPF×2, NRF, AUSF, UDM, UDR, PCF, BSF, NSSF</td></tr>
-    <tr><td><b>UERANSIM</b></td><td>latest</td><td>Radio emulation — gNB (<code>nr-gnb</code>) + 2× UE (<code>nr-ue</code>) — 5G-AKA auth + PDU sessions</td></tr>
-    <tr><td><b>MongoDB</b></td><td>6.x</td><td>Subscriber database — IMSI, K key, OPC, APN, S-NSSAI slice config</td></tr>
+    <tr><td><b>UERANSIM</b></td><td>latest</td><td>gNB (<code>nr-gnb</code>) + 2× UE (<code>nr-ue</code>) — 5G-AKA auth + PDU sessions</td></tr>
+    <tr><td><b>MongoDB</b></td><td>6.x</td><td>Subscriber DB — IMSI, K key, OPC, APN, S-NSSAI</td></tr>
   </tbody>
 </table>
+
 <table>
   <thead>
     <tr><th colspan="3">🟠 Infrastructure &amp; Orchestration</th></tr>
     <tr><th>Tool</th><th>Version</th><th>Role</th></tr>
   </thead>
   <tbody>
-    <tr><td><b>Kubernetes</b></td><td>v1.28</td><td>Container orchestration — <code>kubeadm</code> multi-node cluster</td></tr>
-    <tr><td><b>KVM / QEMU</b></td><td>—</td><td>Hypervisor for Worker1 VM — VIRSH automation scripts included</td></tr>
-    <tr><td><b>Flannel</b></td><td>—</td><td>Pod-to-pod CNI overlay network</td></tr>
-    <tr><td><b>Multus</b></td><td>—</td><td>Multi-interface CNI — enables separate N2, N3, N4 bridge interfaces per pod</td></tr>
-    <tr><td><b>OpenEBS</b></td><td>—</td><td>Persistent volume storage — keeps MongoDB data across pod restarts</td></tr>
-    <tr><td><b>Ubuntu</b></td><td>22.04 LTS</td><td>OS on host laptop and all VMs</td></tr>
+    <tr><td><b>Kubernetes</b></td><td>v1.28</td><td>Container orchestration — <code>kubeadm</code> multi-node</td></tr>
+    <tr><td><b>KVM / QEMU</b></td><td>—</td><td>Hypervisor for Worker1 VM — VIRSH scripts included</td></tr>
+    <tr><td><b>Flannel</b></td><td>—</td><td>Pod-to-pod CNI overlay</td></tr>
+    <tr><td><b>Multus</b></td><td>—</td><td>Multi-interface CNI — separate N2, N3, N4 bridges per pod</td></tr>
+    <tr><td><b>OpenEBS</b></td><td>—</td><td>Persistent storage for MongoDB across restarts</td></tr>
+    <tr><td><b>Ubuntu</b></td><td>22.04 LTS</td><td>OS on host and all VMs</td></tr>
   </tbody>
 </table>
+
 <table>
   <thead>
     <tr><th colspan="3">🟢 Observability &amp; Security</th></tr>
     <tr><th>Tool</th><th>Version</th><th>Role</th></tr>
   </thead>
   <tbody>
-    <tr><td><b>Prometheus</b></td><td>—</td><td>Scrapes UPF metrics — bytes TX/RX, active GTP tunnels, PDU sessions</td></tr>
-    <tr><td><b>Grafana</b></td><td>—</td><td>Real-time dashboards — throughput per UE, CPU%, RAM across nodes</td></tr>
-    <tr><td><b>Tailscale</b></td><td>—</td><td>Zero-trust mesh VPN — secure remote access to cluster from anywhere</td></tr>
-    <tr><td><b>WireGuard</b></td><td>kernel 5.6+</td><td>Encrypted transport layer used by Tailscale (Curve25519 + ChaCha20)</td></tr>
-    <tr><td><b>iperf3</b></td><td>—</td><td>TCP/UDP benchmarking — 6 experimental scenarios (1 UE and 2 UE)</td></tr>
+    <tr><td><b>Prometheus</b></td><td>—</td><td>Scrapes UPF metrics — bytes TX/RX, GTP tunnels, PDU sessions</td></tr>
+    <tr><td><b>Grafana</b></td><td>—</td><td>Real-time dashboards — throughput per UE, CPU%, RAM</td></tr>
+    <tr><td><b>Tailscale</b></td><td>—</td><td>Zero-trust mesh VPN — remote access from anywhere</td></tr>
+    <tr><td><b>WireGuard</b></td><td>kernel 5.6+</td><td>Encrypted transport (Curve25519 + ChaCha20) under Tailscale</td></tr>
+    <tr><td><b>iperf3</b></td><td>—</td><td>TCP/UDP benchmarking — 6 experimental scenarios</td></tr>
   </tbody>
 </table>
 
+---
 
-📁 Repository Structure
+## 📁 Repository Structure
+```
 .
-├── KVM-fiee/                  # KVM VM automation scripts (VIRSH)
-│   └── create_worker1.sh      # Automated worker1 VM deployment
-│
-├── VM-KVM/                    # VM configuration files
-│
-├── k8s-fiee/                  # Kubernetes cluster setup
-│   ├── install_master.sh      # Master node init (uses KVM bridge IP)
-│   ├── install_worker.sh      # Worker node setup
-│   └── worker-join-token.sh   # Generates join token for worker1
-│
-├── open5gs-uerasim-fiee/      # 5G Core + RAN manifests
-│   ├── open5gs/               # YAML manifests per NF (AMF, SMF, UPF...)
-│   └── ueransim/              # gNB and UE configuration YAMLs
-│
-├── monitoring/                # Observability stack
-│   ├── prometheus/            # Prometheus config & scrape targets
-│   └── grafana/               # Dashboard JSONs (UPF traffic, resources)
-│
-├── iperf3/                    # Performance test scripts
-│   └── run_scenarios.sh       # Runs all 6 experimental scenarios
-│
+├── KVM-fiee/               # KVM VM automation (VIRSH scripts)
+├── VM-KVM/                 # VM configuration files
+├── k8s-fiee/               # Kubernetes cluster setup
+│   ├── install_master.sh   # Master node init (fixed KVM bridge IP)
+│   ├── install_worker.sh   # Worker node setup
+│   └── worker-join-token.sh
+├── open5gs-uerasim-fiee/   # 5G Core + RAN YAML manifests
+├── monitoring/             # Prometheus + Grafana configs & dashboards
+├── iperf3/                 # Performance test scripts (6 scenarios)
 └── README.md
+```
 
-🚀 Deployment Guide (Step by Step)
-Prerequisites
-Step 1 — Create the Worker1 Virtual Machine
+---
 
-Laptop with 8+ CPU threads and 16 GB RAM (tested on Lenovo T490s)
-Ubuntu 22.04 LTS installed natively (not inside a VM)
-KVM/QEMU enabled (kvm-ok should return "KVM acceleration can be used")
-Git, curl, bash
-Laptop with 8+ CPU threads and 16 GB RAM (tested on Lenovo T490s)
-Ubuntu 22.04 LTS installed natively (not inside a VM)
-KVM/QEMU enabled (kvm-ok should return "KVM acceleration can be used")
-Git, curl, bash
+## 🚀 Deployment Guide
 
+### Prerequisites
+- **8+ CPU threads · 16 GB RAM** (tested on Lenovo T490s i7-8665U)
+- **Ubuntu 22.04 LTS** installed natively
+- KVM enabled — run `kvm-ok` to verify
+- `git`, `curl`, `bash`
 
-Step 1 — Create the Worker1 Virtual Machine
-bashcd KVM-fiee/
-chmod +x create_worker1.sh
-./create_worker1.sh
-This script uses VIRSH to create the KVM virtual machine (worker1) with:
+---
 
-4 vCPUs, 6 GB RAM allocated from the host
-Ubuntu 22.04 cloud image
-Connected to the virbr0 bridge → gets IP 192.168.122.7
+### Step 1 — Create Worker1 VM
+```bash
+cd KVM-fiee/
+chmod +x create_worker1.sh && ./create_worker1.sh
+virsh list --all   # → worker1   running
+```
 
-Verify:
-bashvirsh list --all
-# Should show: worker1   running
+---
 
-Step 2 — Deploy Kubernetes Cluster
+### Step 2 — Deploy Kubernetes
+```bash
+# On master (host):
+cd k8s-fiee/ && ./install_master.sh
 
-⚠️ Important: These scripts use the KVM bridge IP (192.168.122.1) as the master node address — not the Wi-Fi IP. This keeps the cluster stable even when the laptop changes Wi-Fi networks.
-
-On the host (master node):
-bashcd k8s-fiee/
-chmod +x install_master.sh
-./install_master.sh
-On worker1 (SSH into it first):
-bashssh ubuntu@192.168.122.7
-cd k8s-fiee/
+# On worker1:
+ssh ubuntu@192.168.122.7
 ./install_worker.sh
-Join worker1 to the cluster:
-bash# On master:
-./worker-join-token.sh    # Generates the kubeadm join command
 
-# Copy the output and run it on worker1
-Verify cluster is ready:
-bashkubectl get nodes
-# NAME          STATUS   ROLES           AGE
-# alvarolap     Ready    control-plane   Xm
-# worker1       Ready    <none>          Xm
+# Join worker1 to cluster (run on master):
+./worker-join-token.sh   # copy output → run on worker1
 
-Step 3 — Deploy Open5GS (5G Core)
-bashcd open5gs-uerasim-fiee/
-kubectl apply -f open5gs/
-This deploys all 5G Network Functions as separate pods in the open5gs namespace:
-bashkubectl get pods -n open5gs
-# AMF, SMF01, SMF02, UPF01, UPF02, NRF, AUSF, UDM, UDR, PCF, BSF
-# mongodb, webui → should all show Running
-Register your subscribers via the WebUI (port-forward to access):
-bashkubectl port-forward svc/webui 3000:3000 -n open5gs
-# Open browser: http://localhost:3000
-# Add subscribers: IMSI, K key, OPC, APN → one for UE1, one for UE2
+# Verify:
+kubectl get nodes
+# alvarolap   Ready   control-plane
+# worker1     Ready   <none>
+```
 
-Step 4 — Deploy UERANSIM (Radio + Subscribers)
-bashkubectl apply -f open5gs-uerasim-fiee/ueransim/
-UERANSIM runs with hostNetwork: true so it can reach the Core NFs directly through the bridge network.
-Verify registration:
-bashkubectl logs -n open5gs <ueransim-gnb-pod>
-# Look for: "UE1 registered successfully"
-# Look for: "PDU Session established"
+---
 
-Step 5 — Deploy Monitoring (Prometheus + Grafana)
-bashcd monitoring/
-kubectl apply -f prometheus/
-kubectl apply -f grafana/
-Access Grafana dashboard:
-bashkubectl port-forward svc/grafana 3001:3000 -n monitoring
-# Open: http://localhost:3001
-# Default: admin / admin
-The UPF traffic dashboard shows real-time throughput per subscriber scraped directly from Open5GS metrics endpoints.
+### Step 3 — Deploy Open5GS (5G Core)
+```bash
+kubectl apply -f open5gs-uerasim-fiee/open5gs/
+kubectl get pods -n open5gs   # all pods → Running
 
-Step 6 — Remote Access with Tailscale
-bash# Install Tailscale on both master and worker1
+# Register subscribers via WebUI:
+kubectl port-forward svc/webui 3000:3000 -n open5gs
+# → http://localhost:3000  (add UE1 and UE2: IMSI, K, OPC, APN)
+```
+
+---
+
+### Step 4 — Deploy UERANSIM (RAN + UEs)
+```bash
+kubectl apply -f open5gs-uerasim-fiee/ueransim/
+kubectl logs -n open5gs <gnb-pod>
+# → "UE registered" + "PDU Session established"
+```
+
+---
+
+### Step 5 — Deploy Monitoring
+```bash
+kubectl apply -f monitoring/prometheus/
+kubectl apply -f monitoring/grafana/
+kubectl port-forward svc/grafana 3001:3000 -n monitoring
+# → http://localhost:3001  (admin / admin)
+```
+
+---
+
+### Step 6 — Remote Access via Tailscale
+```bash
 curl -fsSL https://tailscale.com/install.sh | sh
 sudo tailscale up
+# Both nodes get stable IPs: 100.64.x.x
+# Access WebUI, Grafana, kubectl from anywhere
+```
 
-# Both nodes will receive stable IPs in the 100.64.x.x range
-# Access WebUI, Grafana, kubectl from anywhere — securely
+---
 
-Step 7 — Run Performance Tests (iperf3)
-The lab includes 6 experimental scenarios tested with iperf3:
-ScenarioUEsProtocolDirectionE1 — Baseline1TCPUplinkE2 — Dual UE2TCPUplinkE3 — TCP Up2TCPUplinkE4 — TCP Down2TCPDownlinkE5 — UDP Up2UDPUplinkE6 — UDP Down2UDPDownlink
-bashcd iperf3/
-./run_scenarios.sh
-# Results: throughput (Mbps), RTT (ms), jitter (ms), CPU%, RAM (MiB)
+### Step 7 — Run Performance Tests
+```bash
+cd iperf3/ && ./run_scenarios.sh
+```
 
-📊 Results Snapshot
-All 6 scenarios were executed successfully with 2 simultaneous subscribers. Key findings:
+| Scenario | UEs | Protocol | Direction |
+|----------|:---:|----------|-----------|
+| E1 — Baseline | 1 | TCP | Uplink |
+| E2 — Dual UE | 2 | TCP | Uplink |
+| E3 — TCP Up | 2 | TCP | Uplink |
+| E4 — TCP Down | 2 | TCP | Downlink |
+| E5 — UDP Up | 2 | UDP | Uplink |
+| E6 — UDP Down | 2 | UDP | Downlink |
 
-✅ Both UEs completed 5G-AKA authentication and established PDU sessions
-✅ End-to-end data connectivity validated through GTP-U tunnels (N3 interface)
-✅ Prometheus + Grafana dashboard confirmed throughput coherence with iperf3 measurements
-✅ Remote access via Tailscale validated from external networks
-✅ Lab remained stable across all scenarios on consumer-grade hardware
+---
 
+## 📊 Results
 
-🎓 Academic Context
-This project was developed as the undergraduate thesis for the Electronic Engineering degree at the Faculty of Electrical and Electronic Engineering (FIEE), Universidad Nacional del Callao (UNAC), Peru.
-Thesis title:
+- ✅ Both UEs completed 5G-AKA auth and established PDU sessions
+- ✅ End-to-end GTP-U tunnels validated on N3 interface
+- ✅ Prometheus/Grafana throughput matched iperf3 measurements
+- ✅ Tailscale remote access confirmed from external networks
+- ✅ Lab stable across all 6 scenarios on consumer-grade hardware
 
-"Development of a Virtual 5G Stand Alone Laboratory in Kubernetes for Two Subscribers as a Tool for Improving Professional Competencies at FIEE UNAC, 2026"
+---
 
-Research problem this solves:
-In Peru, hands-on 5G training is restricted to mobile operators and equipment manufacturers. Students graduate without ever touching a 5G Core. This lab changes that — giving any student with a capable laptop the ability to configure AMF, register subscribers, run PDU sessions, and monitor network traffic with industry-standard tools.
+## 🎓 Academic Context
 
-🔗 Credits & References
-This project builds upon the foundational work of:
+Undergraduate thesis — **Electronic Engineering**, FIEE, Universidad Nacional del Callao (UNAC), Peru.
 
-@Niloysh (Niloy Saha) — Original Open5GS + Kubernetes testbed automator. The YAML structure and multi-UPF slicing configuration was adapted from his repository.
-Open5GS Project — 3GPP-compliant open-source 5G Core
-UERANSIM — Open-source 5G UE and gNB simulator
+> In Peru, 5G hands-on training is restricted to operators and vendors. Students graduate without ever configuring a Core NF. This lab gives any student with a capable laptop the ability to deploy AMF, register subscribers, run PDU sessions, and monitor traffic with industry-standard tools.
 
-Key modifications made in this project:
+---
 
-Adapted Kubernetes scripts to use fixed KVM bridge IPs instead of Wi-Fi IPs (ensures cluster stability across networks)
-Added Tailscale integration for secure remote lab access
-Integrated iperf3 test automation for all 6 experimental scenarios
-Built Prometheus/Grafana dashboards specifically for UPF traffic monitoring
-Documented the full deployment as a reproducible academic lab
+## 🔗 Credits
 
+- **[@Niloysh](https://github.com/niloysh/open5gs-k8s)** — Open5GS K8s testbed automator (base YAML structure adapted here)
+- **[Open5GS](https://open5gs.org)** — 3GPP-compliant open-source 5G Core
+- **[UERANSIM](https://github.com/aligungr/UERANSIM)** — Open-source 5G UE and gNB simulator
 
-📄 License
-MIT License — feel free to use, fork, and adapt for your own research or courses.
-If this helped your project, a ⭐ on the repo is appreciated!
+**Key modifications in this project:**
+1. K8s scripts use **fixed KVM bridge IPs** — cluster survives Wi-Fi changes
+2. **Tailscale** integration for secure remote lab access
+3. **iperf3** automation for all 6 experimental scenarios
+4. **Prometheus/Grafana** dashboards for UPF traffic monitoring
+5. Full deployment documented as a **reproducible academic lab**
+
+---
 
 <div align="center">
-Built with ☕ and signal processing knowledge at UNAC, Callao, Peru
-"The best way to learn 5G is to break it and fix it yourself."
+
+**Built with ☕ at UNAC, Callao, Peru**
+
+*"The best way to learn 5G is to break it and fix it yourself."*
+
+⭐ If this helped your project, a star on the repo is appreciated!
+
 </div>

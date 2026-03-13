@@ -275,12 +275,11 @@ kubectl get nodes
 ### Step 3 — Deploy Open5GS (5G Core)
 You can use the automatization script.
 ```bash
-kubectl apply -f open5gs-uerasim-fiee/open5gs/
+kubectl apply -k open5gs-uerasim-fiee/open5gs/
 kubectl get pods -n open5gs   # all pods → Running
 
 # Register subscribers via WebUI:
-kubectl port-forward svc/webui 3000:3000 -n open5gs
-# → http://localhost:3000  (add UE1 and UE2: IMSI, K, OPC, APN)
+ → http://localhost:3000  (add UE1 and UE2: IMSI, K, OPC, APN)
 ```
 
 ---
@@ -316,12 +315,13 @@ sudo tailscale up
 <img width="886" height="310" alt="image" src="https://github.com/user-attachments/assets/25f693ca-8296-4c73-b53e-24bd341b6bbe" />
 
 ```
-
+```
+<img width="886" height="358" alt="image" src="https://github.com/user-attachments/assets/04e8a08b-c83a-4837-8e74-a695143fa165" />
+```
 ---
 
 ### Step 7 — Run Performance Tests
 ```bash
-cd iperf3/ && ./run_scenarios.sh
 ```
 
 | Scenario | UEs | Protocol | Direction |

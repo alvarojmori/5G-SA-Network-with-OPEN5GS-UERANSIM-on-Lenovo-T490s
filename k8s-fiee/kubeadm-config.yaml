@@ -25,11 +25,15 @@ networking:
   serviceSubnet: "10.96.0.0/12"
 apiServer:
   timeoutForControlPlane: 4m0s # Damos más tiempo de arranque (Evita el timeout de 12 restarts)
+  extraArgs:
+    bind-address: "0.0.0.0"       # Escucha en TODAS las interfaces, incluyendo lo/127.0.0.1
+    advertise-address: "192.168.122.1"
   certSANs:
     - 192.168.122.1
     - 100.78.15.113
     - alvarolap.tailbd8454.ts.net
     - 127.0.0.1
+    - localhost
 # Optimizamos etcd para que no sea tan sensible a la latencia del disco de la laptop
 etcd:
   local:

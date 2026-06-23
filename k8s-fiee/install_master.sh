@@ -146,7 +146,7 @@ EOF
 install_components() {
     print_header "INSTALANDO COMPONENTES BASE (FASE 2/6)"
 
-    print_subheader "Instalando containerd + Open vSwitch"
+    print_subheader "Instalando containerd + Open vSwitch + herramientas de red"
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
         ca-certificates \
@@ -154,7 +154,10 @@ install_components() {
         gnupg \
         apt-transport-https \
         containerd \
-        openvswitch-switch
+        openvswitch-switch \
+        iptables \
+        netfilter-persistent \
+        iptables-persistent
 
     print_subheader "Habilitando Open vSwitch"
     sudo systemctl enable --now openvswitch-switch
@@ -182,6 +185,15 @@ install_components() {
 
     print_subheader "Configurando kubelet con Node-IP fijo del bridge"
     echo "KUBELET_EXTRA_ARGS=\"--node-ip=${MASTER_NODE_IP}\"" | sudo tee /etc/default/kubelet >/dev/null
+
+    print_subheader "Forzando kubelet a esperar libvirtd y virbr0 antes de arrancar"
+    sudo mkdir -p /etc/systemd/system/kubelet.service.d
+    cat <<EOF | sudo tee /etc/systemd/system/kubelet.service.d/10-wait-network.conf >/dev/null
+[Unit]
+After=libvirtd.service network-online.target
+Wants=libvirtd.service network-online.target
+EOF
+
     sudo systemctl daemon-reload
     sudo systemctl enable kubelet
     sudo systemctl restart kubelet
@@ -226,8 +238,60 @@ wait_for_apiserver() {
     exit 1
 }
 
+apply_iptables_rules() {
+    print_subheader "Aplicando reglas iptables para K8s (API server, pods, bridge)"
+
+    # Asegura que INPUT acepta el API server desde cualquier origen en todas las interfaces
+    sudo iptables -C INPUT -p tcp --dport 6443 -j ACCEPT 2>/dev/null \
+        || sudo iptables -I INPUT -p tcp --dport 6443 -j ACCEPT
+
+    # Acepta tráfico establecido/relacionado (evita timeouts en conexiones ya activas)
+    sudo iptables -C INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT 2>/dev/null \
+        || sudo iptables -I INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+    # Permite forward del rango de pods Flannel (10.244.0.0/16)
+    sudo iptables -C FORWARD -s 10.244.0.0/16 -j ACCEPT 2>/dev/null \
+        || sudo iptables -I FORWARD -s 10.244.0.0/16 -j ACCEPT
+    sudo iptables -C FORWARD -d 10.244.0.0/16 -j ACCEPT 2>/dev/null \
+        || sudo iptables -I FORWARD -d 10.244.0.0/16 -j ACCEPT
+
+    # Permite puerto kubelet
+    sudo iptables -C INPUT -p tcp --dport 10250 -j ACCEPT 2>/dev/null \
+        || sudo iptables -I INPUT -p tcp --dport 10250 -j ACCEPT
+
+    # Persiste las reglas para sobrevivir reboot
+    sudo netfilter-persistent save >/dev/null 2>&1 || true
+
+    print_success "Reglas iptables aplicadas y persistidas"
+}
+
+ensure_libvirt_network() {
+    print_subheader "Asegurando red libvirt default activa (virbr0 con ${MASTER_NODE_IP})"
+
+    if command -v virsh >/dev/null 2>&1; then
+        sudo virsh net-start default 2>/dev/null || true
+        sudo virsh net-autostart default 2>/dev/null || true
+    fi
+
+    # Verifica que virbr0 tenga la IP esperada; si no, espera hasta 30s
+    local waited=0
+    until ip -4 -o addr show dev "${MASTER_BRIDGE_IF}" 2>/dev/null | grep -q "${MASTER_NODE_IP}/"; do
+        sleep 2
+        waited=$((waited + 2))
+        if [[ "${waited}" -ge 30 ]]; then
+            print_error "virbr0 no obtuvo la IP ${MASTER_NODE_IP} en 30s. Verifica que libvirtd esté corriendo."
+            exit 1
+        fi
+    done
+
+    print_success "virbr0 activo con IP ${MASTER_NODE_IP}"
+}
+
 init_cluster() {
     print_header "INICIALIZANDO CLÚSTER K8S (FASE 4/6)"
+
+    ensure_libvirt_network
+    apply_iptables_rules
 
     print_subheader "Pre-pull de imágenes"
     sudo kubeadm config images pull --config "${WORKING_DIR}/kubeadm-config.yaml"
@@ -235,10 +299,13 @@ init_cluster() {
     print_subheader "Inicializando control-plane"
     sudo kubeadm init --config "${WORKING_DIR}/kubeadm-config.yaml"
 
-    print_subheader "Configurando kubeconfig para el usuario"
+    print_subheader "Configurando kubeconfig para el usuario (apuntando a 127.0.0.1)"
     mkdir -p "${HOME}/.kube"
-    sudo cp /etc/kubernetes/admin.conf "${HOME}/.kube/config"
-    sudo chown "$(id -u)":"$(id -g)" "${HOME}/.kube/config"
+    # Usamos 127.0.0.1 en lugar de 192.168.122.1 para que kubectl en el master
+    # funcione siempre, incluso si virbr0 tarda en levantarse después de un reboot.
+    sudo sed "s|https://${MASTER_NODE_IP}:6443|https://127.0.0.1:6443|g" \
+        /etc/kubernetes/admin.conf > "${HOME}/.kube/config"
+    chmod 600 "${HOME}/.kube/config"
 
     wait_for_apiserver
 
@@ -352,6 +419,9 @@ setup_networking() {
     apply_manifest_with_retries "${CNAO_OPERATOR_URL}" "CNAO operator" 20 5
 
     rm -f "${flannel_manifest}"
+
+    # Flannel y kube-proxy pueden haber modificado iptables; re-aseguramos las reglas críticas
+    apply_iptables_rules
 
     print_success "Red base del clúster desplegada"
 }

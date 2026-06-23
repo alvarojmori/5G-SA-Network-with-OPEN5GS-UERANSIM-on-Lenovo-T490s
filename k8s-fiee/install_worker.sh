@@ -134,7 +134,10 @@ install_components() {
         jq \
         apt-transport-https \
         containerd \
-        openvswitch-switch
+        openvswitch-switch \
+        iptables \
+        netfilter-persistent \
+        iptables-persistent
 
     print_subheader "Habilitando Open vSwitch"
     sudo systemctl enable --now openvswitch-switch
@@ -162,6 +165,27 @@ install_components() {
 
     print_subheader "Configurando kubelet con Node-IP fijo"
     echo "KUBELET_EXTRA_ARGS=\"--node-ip=${WORKER_NODE_IP}\"" | sudo tee /etc/default/kubelet >/dev/null
+
+    print_subheader "Asegurando que kubelet espere red completa antes de arrancar"
+    sudo mkdir -p /etc/systemd/system/kubelet.service.d
+    cat <<EOF | sudo tee /etc/systemd/system/kubelet.service.d/10-wait-network.conf >/dev/null
+[Unit]
+After=network-online.target
+Wants=network-online.target
+EOF
+
+    print_subheader "Aplicando reglas iptables base del worker"
+    # Permite tráfico de vuelta al master (kubelet → API server)
+    sudo iptables -C INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT 2>/dev/null \
+        || sudo iptables -I INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+    sudo iptables -C INPUT -p tcp --dport 10250 -j ACCEPT 2>/dev/null \
+        || sudo iptables -I INPUT -p tcp --dport 10250 -j ACCEPT
+    sudo iptables -C FORWARD -s 10.244.0.0/16 -j ACCEPT 2>/dev/null \
+        || sudo iptables -I FORWARD -s 10.244.0.0/16 -j ACCEPT
+    sudo iptables -C FORWARD -d 10.244.0.0/16 -j ACCEPT 2>/dev/null \
+        || sudo iptables -I FORWARD -d 10.244.0.0/16 -j ACCEPT
+    sudo netfilter-persistent save >/dev/null 2>&1 || true
+
     sudo systemctl daemon-reload
     sudo systemctl enable kubelet
     sudo systemctl restart kubelet
@@ -232,4 +256,3 @@ main() {
 }
 
 main "$@"
-

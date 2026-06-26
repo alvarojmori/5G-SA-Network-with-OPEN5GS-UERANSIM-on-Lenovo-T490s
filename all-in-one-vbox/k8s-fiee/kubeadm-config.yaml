@@ -1,0 +1,47 @@
+# ============================================================================
+# kubeadm-config.yaml — ADAPTADO PARA VIRTUALBOX (nodo único)
+#   - IP de la VM:        10.0.2.15   (antes 192.168.122.1)
+#   - Interfaz:           enp0s3
+# Guardar como: k8s-fiee/kubeadm-config.yaml
+# ============================================================================
+
+# 1. Configuración del Kubelet: Forzamos Systemd para evitar conflictos con Docker/Containerd
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+cgroupDriver: systemd
+# Evitamos reinicios por fallos de red iniciales
+serializeImagePulls: false
+---
+# 2. Configuración de Inicio: Definimos exactamente la interfaz de red
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: 10.0.2.15        # <-- IP de la VM en VirtualBox
+  bindPort: 6443
+nodeRegistration:
+  criSocket: unix:///var/run/containerd/containerd.sock
+  imagePullPolicy: IfNotPresent
+---
+# 3. Configuración del Clúster: Estabilidad y Red
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+kubernetesVersion: v1.28.15
+controlPlaneEndpoint: "10.0.2.15:6443"   # <-- IP de la VM en VirtualBox
+networking:
+  podSubnet: "10.244.0.0/16"   # Rango estándar para Flannel
+  serviceSubnet: "10.96.0.0/12"
+apiServer:
+  timeoutForControlPlane: 4m0s   # Damos más tiempo de arranque (Evita el timeout de 12 restarts)
+  extraArgs:
+    bind-address: "0.0.0.0"            # Escucha en TODAS las interfaces, incluyendo lo/127.0.0.1
+    advertise-address: "10.0.2.15"    # <-- IP de la VM en VirtualBox
+  certSANs:
+    - 10.0.2.15        # <-- IP de la VM en VirtualBox
+    - 127.0.0.1
+    - localhost
+# Optimizamos etcd para que no sea tan sensible a la latencia del disco
+etcd:
+  local:
+    extraArgs:
+      heartbeat-interval: "250"
+      election-timeout: "1250"

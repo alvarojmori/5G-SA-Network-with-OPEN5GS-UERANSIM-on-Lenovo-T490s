@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROM_DIR="/home/5gcluster/prometheus"
+PROM_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MON_NS="monitoring"
 RELEASE="mon"
 TMP_VALUES="/tmp/mon-values-additional-scrape.yaml"
@@ -20,7 +20,8 @@ for f in \
   "$PROM_DIR/upf-metrics-services.yaml" \
   "$PROM_DIR/additional-scrape-config.yaml" \
   "$PROM_DIR/kustomization.yaml" \
-  "$PROM_DIR/mon-values.yaml"
+  "$PROM_DIR/mon-values.yaml" \
+  "$PROM_DIR/5gcoreservicemonitor.yaml"
 do
   [ -f "$f" ] || { echo "ERROR: falta $f"; exit 1; }
 done
@@ -29,7 +30,9 @@ echo "[3/9] Creando namespace monitoring si no existe..."
 kubectl get ns "$MON_NS" >/dev/null 2>&1 || kubectl create namespace "$MON_NS"
 
 echo "[4/9] Eliminando ServiceMonitor viejo si existe..."
-kubectl delete servicemonitor -n "$MON_NS" open5gs-upf-metrics --ignore-not-found
+# El CRD ServiceMonitor puede no existir aun (se instala con kube-prometheus-stack
+# en el paso [8/9]). Ignoramos el error de "resource type not found".
+kubectl delete servicemonitor -n "$MON_NS" open5gs-upf-metrics --ignore-not-found 2>/dev/null || true
 
 echo "[5/9] Aplicando Services + Secret (kustomize)..."
 kubectl apply -k "$PROM_DIR"
@@ -54,7 +57,15 @@ helm upgrade --install "$RELEASE" prometheus-community/kube-prometheus-stack \
   -f "$PROM_DIR/mon-values.yaml" \
   -f "$TMP_VALUES"
 
-echo "[9/9] Esperando pods de monitoring..."
+echo "[9/10] Aplicando ServiceMonitor (el CRD ya existe tras instalar el stack)..."
+# Esperamos a que el CRD ServiceMonitor este registrado por kube-prometheus-stack
+for i in $(seq 1 30); do
+  kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1 && break
+  echo "  ...esperando CRD ServiceMonitor ($i/30)"; sleep 5
+done
+kubectl apply -f "$PROM_DIR/5gcoreservicemonitor.yaml"
+
+echo "[10/10] Esperando pods de monitoring..."
 kubectl wait --for=condition=Ready pod --all -n "$MON_NS" --timeout=300s || true
 
 echo

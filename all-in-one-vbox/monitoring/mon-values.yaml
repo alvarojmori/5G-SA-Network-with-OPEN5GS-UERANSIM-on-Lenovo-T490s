@@ -14,11 +14,23 @@ grafana:
   adminPassword: "admin12345"
   resources:
     requests:
-      cpu: 50m
+      cpu: 50m 
       memory: 128Mi
     limits:
-      cpu: 200m
-      memory: 256Mi
+      cpu: 300m
+      memory: 512Mi
+  # Arranque lento en VirtualBox (pocas CPU): damos margen para que el
+  # liveness probe no mate a Grafana antes de que termine de iniciar.
+  livenessProbe:
+    initialDelaySeconds: 120
+    timeoutSeconds: 30
+    failureThreshold: 10
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 30
+    timeoutSeconds: 30
+    failureThreshold: 10
+    periodSeconds: 10
 
 prometheusOperator:
   resources:

@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 # Author: Alvaro Juscamayta, based on N.Saha
 # Description: K8S-FIEE master/control-plane installation
-#              Adaptado para VirtualBox — NODO UNICO, IP 10.0.2.15
-#              Sin variable de bridge. Incluye plugins CNI base + OVS + Multus + OpenEBS.
+# Adaptado para VirtualBox — NODO UNICO, IP 10.0.2.15
+# Sin variable de bridge. Incluye plugins CNI base + OVS + Multus + OpenEBS.
 
 set -euo pipefail
 
 WORKING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-MASTER_NODE_NAME="${MASTER_NODE_NAME:-$(hostname -s)}"
+# Kubernetes registra el nodo SIEMPRE en minúsculas. Forzamos lowercase para que
+# 'kubectl get node <name>' coincida (hostname -s puede traer mayúsculas, p.ej.
+# wait_for_node_ready se cuelga aunque el nodo ya esté Ready.
+MASTER_NODE_NAME="${MASTER_NODE_NAME:-$(hostname -s | tr '[:upper:]' '[:lower:]')}"
 MASTER_NODE_IP="${MASTER_NODE_IP:-10.0.2.15}"          # IP de la VM en VirtualBox
 K8S_CHANNEL="${K8S_CHANNEL:-v1.28}"
 PAUSE_IMAGE="${PAUSE_IMAGE:-registry.k8s.io/pause:3.9}"
@@ -98,6 +101,20 @@ prepare_node() {
         print_info "UFW no está instalado. Se omite."
     fi
 
+    print_subheader "Forzando backend iptables-legacy (acelera kubeadm/kube-proxy)"
+    # En Ubuntu reciente iptables usa nf_tables por defecto; en VMs con pocos
+    # recursos las operaciones (ChainExists) tardan DECENAS de segundos y hacen
+    # Legacy es mucho más rápido y deja el init en ~30s.
+    if update-alternatives --list iptables 2>/dev/null | grep -q legacy; then
+        sudo update-alternatives --set iptables  /usr/sbin/iptables-legacy  || true
+        sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy || true
+        sudo update-alternatives --set arptables /usr/sbin/arptables-legacy 2>/dev/null || true
+        sudo update-alternatives --set ebtables  /usr/sbin/ebtables-legacy  2>/dev/null || true
+        print_success "iptables -> legacy"
+    else
+        print_info "iptables-legacy no disponible; se mantiene el backend actual (nf_tables)."
+    fi
+
     print_subheader "Cargando módulos del kernel base"
     cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf >/dev/null
 overlay
@@ -123,10 +140,28 @@ EOF
     print_success "Nodo preparado"
 }
 
+wait_for_apt_lock() {
+    # Ubuntu corre 'unattended-upgrades' al arrancar y toma el lock de dpkg/apt.
+    # Esperamos a que se libere (hasta 5 min) para evitar el error
+    # "No se pudo bloquear /var/lib/dpkg/lock-frontend" (caso de un compañero).
+    local max=60 i=0
+    while sudo fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/lib/dpkg/lock >/dev/null 2>&1; do
+        i=$((i+1))
+        if [[ "${i}" -gt "${max}" ]]; then
+            print_error "El lock de apt/dpkg sigue ocupado tras 5 min. Ejecuta:"
+            print_error "  sudo systemctl stop unattended-upgrades && sudo pkill -9 unattended-upgr"
+            exit 1
+        fi
+        print_info "apt/dpkg ocupado (probablemente unattended-upgrades). Esperando... (${i}/${max})"
+        sleep 5
+    done
+}
+
 install_components() {
     print_header "INSTALANDO COMPONENTES BASE (FASE 2/6)"
 
     print_subheader "Instalando containerd + Open vSwitch + herramientas de red"
+    wait_for_apt_lock
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
         ca-certificates curl gnupg apt-transport-https \
@@ -153,6 +188,7 @@ install_components() {
     echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_CHANNEL}/deb/ /" \
       | sudo tee /etc/apt/sources.list.d/kubernetes.list >/dev/null
 
+    wait_for_apt_lock
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y kubelet kubeadm kubectl
     sudo apt-mark hold kubelet kubeadm kubectl
@@ -264,11 +300,25 @@ init_cluster() {
     ensure_node_network
     apply_iptables_rules
 
+    # Si ya hay un control-plane inicializado de un intento previo, kubeadm
+    # init falla con "Port 6443 in use / manifests already exist". Detectamos
+    # ese estado y hacemos un reset limpio para poder reintentar sin trabarse.
+    if [[ -f /etc/kubernetes/manifests/kube-apiserver.yaml ]] || sudo ss -ltn 2>/dev/null | grep -q ':6443'; then
+        print_info "Se detectó un control-plane previo. Haciendo 'kubeadm reset' para empezar limpio..."
+        sudo kubeadm reset -f || true
+        sudo rm -rf /etc/kubernetes /var/lib/etcd /etc/cni/net.d "${HOME}/.kube"
+        sudo systemctl restart containerd kubelet 2>/dev/null || true
+        sleep 5
+    fi
+
     print_subheader "Pre-pull de imágenes"
     sudo kubeadm config images pull --config "${WORKING_DIR}/kubeadm-config.yaml"
 
     print_subheader "Inicializando control-plane"
-    sudo kubeadm init --config "${WORKING_DIR}/kubeadm-config.yaml"
+    # --ignore-preflight-errors=NumCPU: VMs con 1 CPU (kubeadm exige 2). Se
+    # permite continuar; recomendado 2-4 CPU para que no haya 'flapping'.
+    sudo kubeadm init --config "${WORKING_DIR}/kubeadm-config.yaml" \
+        --ignore-preflight-errors=NumCPU
 
     print_subheader "Configurando kubeconfig (apuntando a 127.0.0.1)"
     mkdir -p "${HOME}/.kube"
@@ -331,7 +381,7 @@ wait_for_daemonset() {
 
 wait_for_node_ready() {
     print_subheader "Esperando que el nodo pase a Ready"
-    local tries=120 i
+    local tries=300 i   # 300 x 2s = 10 min (VMs lentas tardan en estabilizar Flannel)
     for ((i=1; i<=tries; i++)); do
         if kubectl get node "${MASTER_NODE_NAME}" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; then
             print_success "Nodo ${MASTER_NODE_NAME} está Ready"
@@ -431,7 +481,8 @@ post_checks() {
 
     print_success "Master instalado correctamente (nodo único VirtualBox)"
     print_info "Este nodo es control-plane y worker a la vez."
-    print_info "Siguiente paso: ./install-open5gs.sh (recuerda correr antes fix-singlenode-yaml.sh)"
+    print_info "Siguiente paso (desde open5gs-uerasim-fiee/): ./install-open5gs.sh"
+    print_info "Los YAML ya están corregidos para nodo único (sin nodeSelector ni taint)."
 }
 
 main() {

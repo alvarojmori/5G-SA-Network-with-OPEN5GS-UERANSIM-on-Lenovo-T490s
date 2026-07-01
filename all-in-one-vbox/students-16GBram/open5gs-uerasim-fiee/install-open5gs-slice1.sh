@@ -1,7 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# install-open5gs-noslice2.sh
-# Despliega el nucleo 5G Open5GS COMPLETO pero SIN el slice 2 (sin smf2/upf2).
+# # Despliega el nucleo 5G Open5GS COMPLETO pero SIN el slice 2 (sin smf2/upf2).
 #
 # Para laptops/PC de 16 GB con VirtualBox: reduce la carga en estado estable
 # sobre etcd/kube-apiserver (un slice menos), evitando el "flapping" del nodo.
@@ -58,13 +57,33 @@ kubectl delete -k open5gs/slices/slice2 -n "${NAMESPACE}" --ignore-not-found
 # Respaldo por si algun objeto quedara (borrado por nombre, idempotente):
 kubectl delete deployment open5gs-smf2 open5gs-upf2 -n "${NAMESPACE}" --ignore-not-found >/dev/null 2>&1 || true
 
+# 7. IMPORTANTE: pcf trae un init container 'wait-smf2' que espera a smf2-nsmf:80.
+#    Como acabamos de eliminar slice2 (smf2), ese init se quedaria esperando
+#    PARA SIEMPRE y bloquearia EN CASCADA a udm -> udr -> nssf -> bsf.
+#    Quitamos ese init container del pcf desplegado (no se toca ningun YAML).
+echo "[+] Ajustando pcf: quitando dependencia de smf2 (slice2 eliminado)..."
+idx=""
+for _try in $(seq 1 30); do
+    idx=$(kubectl get deployment open5gs-pcf -n "${NAMESPACE}" \
+            -o jsonpath='{range .spec.template.spec.initContainers[*]}{.name}{"\n"}{end}' 2>/dev/null \
+            | grep -n '^wait-smf2$' | cut -d: -f1)
+    [ -n "${idx}" ] && break
+    sleep 2
+done
+if [ -n "${idx}" ]; then
+    # jsonpath es 1-based; el patch JSON es 0-based.
+    kubectl patch deployment open5gs-pcf -n "${NAMESPACE}" --type=json \
+        -p="[{\"op\":\"remove\",\"path\":\"/spec/template/spec/initContainers/$((idx-1))\"}]"
+    echo "[i] pcf ahora solo espera a smf1; la cascada se desbloquea."
+else
+    echo "[i] (pcf no tenia wait-smf2; nada que ajustar)"
+fi
+
 echo "-----------------------------------------------"
 echo "[!] Componentes aplicados (sin slice2). Estado:"
 echo "-----------------------------------------------"
 sleep 5
 kubectl get pods -n "${NAMESPACE}" -o wide
 
-echo
-echo "[i] Para esperar a que todo quede Running:"
-echo "    watch kubectl get pods -n ${NAMESPACE}"
-echo "[i] Siguiente paso (UERANSIM ligero): ./install-ueransim-gnb-ue1.sh"
+
+

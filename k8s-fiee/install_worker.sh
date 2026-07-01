@@ -7,7 +7,8 @@ set -euo pipefail
 WORKING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_IF="$(ip route show default 2>/dev/null | awk '/default/ {print $5; exit}')"
 
-WORKER_NODE_NAME="${WORKER_NODE_NAME:-$(hostname -s)}"
+# Kubernetes registra el nodo SIEMPRE en minúsculas (evita desajustes de nombre).
+WORKER_NODE_NAME="${WORKER_NODE_NAME:-$(hostname -s | tr '[:upper:]' '[:lower:]')}"
 WORKER_NODE_IF="${WORKER_NODE_IF:-${DEFAULT_IF:-enp1s0}}"
 WORKER_NODE_IP="${WORKER_NODE_IP:-}"
 K8S_CHANNEL="${K8S_CHANNEL:-v1.28}"
@@ -97,6 +98,19 @@ prepare_node() {
         print_info "UFW no está instalado. Se omite."
     fi
 
+    print_subheader "Forzando backend iptables-legacy (acelera kube-proxy)"
+    # Igual que en el master: en Ubuntu reciente iptables usa nf_tables y en VMs
+    # con pocos recursos va lentísimo. Legacy evita timeouts y latencias.
+    if update-alternatives --list iptables 2>/dev/null | grep -q legacy; then
+        sudo update-alternatives --set iptables  /usr/sbin/iptables-legacy  || true
+        sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy || true
+        sudo update-alternatives --set arptables /usr/sbin/arptables-legacy 2>/dev/null || true
+        sudo update-alternatives --set ebtables  /usr/sbin/ebtables-legacy  2>/dev/null || true
+        print_success "iptables -> legacy"
+    else
+        print_info "iptables-legacy no disponible; se mantiene el backend actual."
+    fi
+
     print_subheader "Cargando módulos del kernel base"
     cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf >/dev/null
 overlay
@@ -122,10 +136,26 @@ EOF
     print_success "Nodo worker preparado"
 }
 
+wait_for_apt_lock() {
+    # 'unattended-upgrades' toma el lock de dpkg/apt al arrancar. Esperamos.
+    local max=60 i=0
+    while sudo fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/lib/dpkg/lock >/dev/null 2>&1; do
+        i=$((i+1))
+        if [[ "${i}" -gt "${max}" ]]; then
+            print_error "El lock de apt/dpkg sigue ocupado tras 5 min. Ejecuta:"
+            print_error "  sudo systemctl stop unattended-upgrades && sudo pkill -9 unattended-upgr"
+            exit 1
+        fi
+        print_info "apt/dpkg ocupado (unattended-upgrades). Esperando... (${i}/${max})"
+        sleep 5
+    done
+}
+
 install_components() {
     print_header "INSTALANDO COMPONENTES BASE (FASE 2/4)"
 
     print_subheader "Instalando paquetes base, containerd y Open vSwitch"
+    wait_for_apt_lock
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
         ca-certificates \
@@ -159,6 +189,7 @@ install_components() {
     echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_CHANNEL}/deb/ /" \
       | sudo tee /etc/apt/sources.list.d/kubernetes.list >/dev/null
 
+    wait_for_apt_lock
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y kubelet kubeadm kubectl
     sudo apt-mark hold kubelet kubeadm kubectl
@@ -239,7 +270,11 @@ post_checks() {
     print_info "Nodo: ${WORKER_NODE_NAME}"
     print_info "Interfaz usada: ${WORKER_NODE_IF}"
     print_info "Node IP: ${WORKER_NODE_IP}"
-    print_info "Siguiente paso: ejecutar el kubeadm join generado desde el master"
+    print_info "Siguiente paso: ejecutar el 'kubeadm join' generado en el master"
+    print_info "  (obtenlo en el master con: ./worker-join-token.sh)"
+    print_info "En VMs con 1 CPU añade:  --ignore-preflight-errors=NumCPU"
+    print_info "Si el worker YA se unió antes y quieres re-unirlo, primero:"
+    print_info "  sudo kubeadm reset -f && sudo rm -rf /etc/cni/net.d"
 }
 
 main() {

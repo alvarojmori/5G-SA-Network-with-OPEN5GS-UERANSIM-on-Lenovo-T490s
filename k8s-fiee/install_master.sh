@@ -6,7 +6,10 @@ set -euo pipefail
 
 WORKING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-MASTER_NODE_NAME="${MASTER_NODE_NAME:-$(hostname -s)}"
+# Kubernetes registra el nodo SIEMPRE en minúsculas. Forzamos lowercase para que
+# 'kubectl get node <name>' coincida (evita que wait_for_node_ready se cuelgue si
+# el hostname trae mayúsculas, p.ej. 'Nodo-VirtualBox').
+MASTER_NODE_NAME="${MASTER_NODE_NAME:-$(hostname -s | tr '[:upper:]' '[:lower:]')}"
 MASTER_NODE_IP="${MASTER_NODE_IP:-192.168.122.1}"
 MASTER_BRIDGE_IF="${MASTER_BRIDGE_IF:-virbr0}"
 K8S_CHANNEL="${K8S_CHANNEL:-v1.28}"
@@ -118,6 +121,20 @@ prepare_node() {
         print_info "UFW no está instalado. Se omite."
     fi
 
+    print_subheader "Forzando backend iptables-legacy (acelera kubeadm/kube-proxy)"
+    # En Ubuntu reciente iptables usa nf_tables; en VMs con pocos recursos las
+    # operaciones (ChainExists) tardan DECENAS de segundos y hacen que
+    # 'kubeadm init' supere el timeout (caso Jurgen). Legacy es mucho más rápido.
+    if update-alternatives --list iptables 2>/dev/null | grep -q legacy; then
+        sudo update-alternatives --set iptables  /usr/sbin/iptables-legacy  || true
+        sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy || true
+        sudo update-alternatives --set arptables /usr/sbin/arptables-legacy 2>/dev/null || true
+        sudo update-alternatives --set ebtables  /usr/sbin/ebtables-legacy  2>/dev/null || true
+        print_success "iptables -> legacy"
+    else
+        print_info "iptables-legacy no disponible; se mantiene el backend actual."
+    fi
+
     print_subheader "Cargando módulos del kernel base"
     cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf >/dev/null
 overlay
@@ -143,10 +160,28 @@ EOF
     print_success "Nodo preparado"
 }
 
+wait_for_apt_lock() {
+    # Ubuntu corre 'unattended-upgrades' al arrancar y toma el lock de dpkg/apt.
+    # Esperamos a que se libere (hasta 5 min) para evitar el error
+    # "No se pudo bloquear /var/lib/dpkg/lock-frontend".
+    local max=60 i=0
+    while sudo fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/lib/dpkg/lock >/dev/null 2>&1; do
+        i=$((i+1))
+        if [[ "${i}" -gt "${max}" ]]; then
+            print_error "El lock de apt/dpkg sigue ocupado tras 5 min. Ejecuta:"
+            print_error "  sudo systemctl stop unattended-upgrades && sudo pkill -9 unattended-upgr"
+            exit 1
+        fi
+        print_info "apt/dpkg ocupado (unattended-upgrades). Esperando... (${i}/${max})"
+        sleep 5
+    done
+}
+
 install_components() {
     print_header "INSTALANDO COMPONENTES BASE (FASE 2/6)"
 
     print_subheader "Instalando containerd + Open vSwitch + herramientas de red"
+    wait_for_apt_lock
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
         ca-certificates \
@@ -179,6 +214,7 @@ install_components() {
     echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_CHANNEL}/deb/ /" \
       | sudo tee /etc/apt/sources.list.d/kubernetes.list >/dev/null
 
+    wait_for_apt_lock
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y kubelet kubeadm kubectl
     sudo apt-mark hold kubelet kubeadm kubectl
@@ -209,13 +245,27 @@ setup_ovs_infrastructure() {
     sudo ovs-vsctl --may-exist add-br n3br
     sudo ovs-vsctl --may-exist add-br n4br
 
-    print_subheader "Instalando binario ovs-cni"
     sudo mkdir -p /opt/cni/bin
+
+    # Plugins base de CNI (loopback, bridge, host-local, portmap...). Aunque el
+    # init container de Flannel también los instala, hacerlo aquí evita la carrera
+    # "loopback not found" que deja el nodo NotReady en VMs lentas (caso Jurgen).
+    print_subheader "Instalando plugins base de CNI v1.4.0"
+    curl -fsSL "https://github.com/containernetworking/plugins/releases/download/v1.4.0/cni-plugins-linux-amd64-v1.4.0.tgz" \
+      | sudo tar -C /opt/cni/bin -xz
+
+    print_subheader "Instalando binario ovs-cni"
     curl -fsSL "https://github.com/k8snetworkplumbingwg/ovs-cni/releases/download/v0.31.0/ovs" -o /tmp/ovs
     sudo mv /tmp/ovs /opt/cni/bin/ovs
     sudo chmod +x /opt/cni/bin/ovs
 
-    print_success "OVS y ovs-cni preparados"
+    print_subheader "Verificando plugins clave"
+    for p in loopback bridge host-local portmap ovs; do
+        [[ -x "/opt/cni/bin/${p}" ]] && print_info "  OK  /opt/cni/bin/${p}" \
+            || { print_error "Falta el plugin /opt/cni/bin/${p}"; exit 1; }
+    done
+
+    print_success "OVS + plugins base + ovs-cni preparados"
 }
 
 wait_for_apiserver() {
@@ -293,21 +343,50 @@ init_cluster() {
     ensure_libvirt_network
     apply_iptables_rules
 
+    
+    # Si ya hay un control-plane inicializado de un intento previo, kubeadm init
+    # falla con "Port 6443 in use / manifests already exist". Detectamos ese
+    # estado y hacemos un reset limpio para poder reintentar sin trabarse.
+    if [[ -f /etc/kubernetes/manifests/kube-apiserver.yaml ]] || sudo ss -ltn 2>/dev/null | grep -q ':6443'; then
+        print_info "Se detectó un control-plane previo. Haciendo 'kubeadm reset' para empezar limpio..."
+        sudo kubeadm reset -f || true
+        sudo rm -rf /etc/kubernetes /var/lib/etcd /etc/cni/net.d "${HOME}/.kube"
+        sudo systemctl restart containerd kubelet 2>/dev/null || true
+        sleep 5
+    fi
+
     print_subheader "Pre-pull de imágenes"
     sudo kubeadm config images pull --config "${WORKING_DIR}/kubeadm-config.yaml"
 
     print_subheader "Inicializando control-plane"
-    sudo kubeadm init --config "${WORKING_DIR}/kubeadm-config.yaml"
+    # --ignore-preflight-errors=NumCPU: permite VMs con 1 CPU (recomendado 2+).
+    sudo kubeadm init --config "${WORKING_DIR}/kubeadm-config.yaml" \
+        --ignore-preflight-errors=NumCPU
 
-    print_subheader "Configurando kubeconfig para el usuario (apuntando a 127.0.0.1)"
+    print_subheader "Configurando kubeconfig para el usuario (apuntando a ${MASTER_NODE_IP})"
     mkdir -p "${HOME}/.kube"
-    # Usamos 127.0.0.1 en lugar de 192.168.122.1 para que kubectl en el master
-    # funcione siempre, incluso si virbr0 tarda en levantarse después de un reboot.
-    sudo sed "s|https://${MASTER_NODE_IP}:6443|https://127.0.0.1:6443|g" \
-        /etc/kubernetes/admin.conf > "${HOME}/.kube/config"
+    # Mantenemos la IP del bridge KVM (${MASTER_NODE_IP}) en el kubeconfig, sin
+    # reescribir a 127.0.0.1, para que sea coherente con el endpoint del clúster
+    # y con el 'kubeadm join' de los workers.
+    sudo cp /etc/kubernetes/admin.conf "${HOME}/.kube/config"
+    sudo chown "$(id -u):$(id -g)" "${HOME}/.kube/config"
     chmod 600 "${HOME}/.kube/config"
 
     wait_for_apiserver
+
+    # ── Relajar liveness probes del control-plane (menos reinicios) ─────────
+    # En VMs lentas etcd/apiserver arrancan despacio y el liveness probe los
+    # mata (RESTARTS que suben). Damos más margen: initialDelay, timeout y
+    # failureThreshold. El kubelet recarga los manifiestos estáticos solo.
+    print_subheader "Relajando probes del control-plane (evita reinicios en VMs lentas)"
+    for comp in etcd kube-apiserver kube-controller-manager kube-scheduler; do
+        f="/etc/kubernetes/manifests/${comp}.yaml"
+        if [[ -f "${f}" ]]; then
+            sudo sed -i 's/failureThreshold: [0-9]\+/failureThreshold: 12/g' "${f}"
+            sudo sed -i 's/timeoutSeconds: [0-9]\+/timeoutSeconds: 30/g' "${f}"
+            sudo sed -i 's/initialDelaySeconds: [0-9]\+/initialDelaySeconds: 60/g' "${f}"
+        fi
+    done
 
     print_subheader "Validando binarios"
     kubectl version --client || true
